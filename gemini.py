@@ -12,7 +12,7 @@ import re
 
 # 頁面配置
 st.set_page_config(
-    page_title="智慧投資總覽",
+    page_title="投資總覽",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -813,8 +813,8 @@ def main():
     # 主標題
     st.markdown("""
     <div class="hero-section">
-        <h1 class="hero-title">💎 智慧投資總覽</h1>
-        <p class="hero-subtitle">Jason • Rita • 富邦英股 • 實時投資組合管理系統</p>
+        <h1 class="hero-title">投資總覽</h1>
+        <p class="hero-subtitle">Jason • Rita • 富邦英股</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -896,7 +896,7 @@ def main():
     # 頁腳
     st.markdown("""
     <div style="text-align: center; padding: 2rem; margin-top: 3rem; border-top: 1px solid #e0e0e0; color: #7f8c8d;">
-        <p>💡 數據每5分鐘自動更新 | 📊 投資有風險，請謹慎決策</p>
+        <p> 數據每5分鐘自動更新 </p>
     </div>
     """, unsafe_allow_html=True)
 
