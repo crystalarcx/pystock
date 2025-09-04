@@ -275,7 +275,7 @@ SHEET_CONFIGS = {
         'trend_range': '資產趨勢!A:B'
     },
     'ed': {
-        'id': 'PLACEHOLDER_ED_SHEET_ID',
+        'id': '1oyG9eKrq57HMBjTWtg4tmKzHQiqc7r-2CWYyhA9ZHNc',
         'holdings_range': '總覽與損益!A:H', 
         'dca_range': '投資設定!A:E',
         'trend_range': '資產趨勢!A:B'
