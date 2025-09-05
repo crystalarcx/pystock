@@ -741,20 +741,20 @@ def render_cathay_table(cathay_df):
         for col in display_df.columns:
             if col in ['F'] or any(keyword in str(col) for keyword in ['價', '成本', '市值', '損益', '金額']):
                 try:
-                    display_df[col] = display_df[col].apply(lambda x: format_currency(parse_number(x), 'TWD') if pd.notna(x) and str(x).strip() != '' else x)
+                    display_df[col] = display_df[col].apply(lambda x: format_currency(parse_number(x), 'USD') if pd.notna(x) and str(x).strip() != '' else x)
                 except:
                     pass
         
-        # 設定顏色樣式
-        def color_negative_red(val):
-            if isinstance(val, str) and ('NT$-' in val or val.startswith('-')):
-                return 'color: #e74c3c; font-weight: bold'
-            elif isinstance(val, str) and '+' in val and '%' in val:
-                return 'color: #27ae60; font-weight: bold'
-            return ''
-        
-        styled_df = display_df.style.applymap(color_negative_red)
-        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+# 設定顏色樣式
+def color_negative_red(val):
+    if isinstance(val, str) and ('$' in val and '-' in val):
+        return 'color: #e74c3c; font-weight: bold'
+    elif isinstance(val, str) and '+' in val and '%' in val:
+        return 'color: #27ae60; font-weight: bold'
+    return ''
+    
+styled_df = display_df.style.applymap(color_negative_red)
+st.dataframe(styled_df, use_container_width=True, hide_index=True)
         
     except Exception as e:
         st.error(f"國泰證券表格渲染錯誤: {e}")
