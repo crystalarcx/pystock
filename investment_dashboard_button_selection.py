@@ -613,8 +613,8 @@ def render_user_selection():
         {'key': 'jason', 'icon': '👨‍💼', 'label': 'Jason', 'desc': '台股投資'},
         {'key': 'rita', 'icon': '👩‍💼', 'label': 'Rita', 'desc': '台股投資'},
         {'key': 'ed', 'icon': '👨‍💻', 'label': 'Ed (台股)', 'desc': '台股投資'},
-        {'key': 'ed_combined', 'icon': '🌐', 'label': 'Ed (綜合)', 'desc': '美股+台股'},
-        {'key': 'os', 'icon': '🌍', 'label': '海外投資', 'desc': '美股投資'}
+        {'key': 'ed_combined', 'icon': '🌐', 'label': 'Ed (美股)', 'desc': '嘉信+國泰美股'},
+        {'key': 'os', 'icon': '🌍', 'label': '海外投資', 'desc': '富邦英股'}
     ]
     
     # 建立按鈕欄位
