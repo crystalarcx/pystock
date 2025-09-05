@@ -1029,40 +1029,43 @@ def main():
                 color=platforms,
                 color_discrete_sequence=['#1f4e79', '#8b0000', '#2d3436']
             )
-            fig.update_layout(showlegend=False)
-            fig.update_yaxis(title_text='總市值 (USD)')
+            
+            # --- 修正開始 ---
+            fig.update_layout(
+                showlegend=False,
+                yaxis_title='總市值 (USD)'  # 將 yaxis_title 移到這裡
+            )
             st.plotly_chart(fig, use_container_width=True)
-        
+            # --- 修正結束 ---
+            
     else:
-        st.header(f"{person.capitalize()} 投資總覽")
-
-        # 載入數據
+        # 處理 jason, rita, ed 的台股投資
+        st.header(f"{person.capitalize()} 台股投資總覽")
+        
         holdings_df = load_sheet_data(person, 'holdings')
         dca_df = load_sheet_data(person, 'dca')
         trend_df = load_sheet_data(person, 'trend')
 
-        if holdings_df.empty:
-            st.warning("無法載入數據，請檢查Google Sheets設定和連線。")
-        else:
+        if not holdings_df.empty:
             # 渲染摘要卡片
             render_summary_cards(person, holdings_df, dca_df)
             
-            # 使用標籤頁組織內容
-            tab1, tab2, tab3 = st.tabs(["📊 資產配置", "📈 損益表", "🗓️ 歷史趨勢"])
+            # 建立標籤頁
+            tab1, tab2, tab3 = st.tabs(["📈 持股明細", "🥧 資產配置", "📊 資產趨勢"])
             
             with tab1:
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                render_portfolio_chart(holdings_df, person)
-                st.markdown('</div>', unsafe_allow_html=True)
-
-            with tab2:
-                st.subheader("持股詳細列表")
+                st.subheader("持股明細")
                 render_holdings_table(holdings_df, person)
             
+            with tab2:
+                st.subheader("資產配置")
+                render_portfolio_chart(holdings_df, person)
+            
             with tab3:
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+                st.subheader("資產趨勢")
                 render_trend_chart(trend_df)
-                st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.warning(f"無法載入 {person} 的投資數據，或數據為空。")
 
 if __name__ == "__main__":
     main()
