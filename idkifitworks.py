@@ -855,7 +855,7 @@ def main():
     person = st.selectbox(
         "選擇投資者",
         ['jason', 'rita', 'ed', 'ed_combined', 'os'],
-        format_func=lambda x: {'jason': 'Jason', 'rita': 'Rita', 'ed': 'Ed (台股)', 'ed_combined': 'Ed (國泰+嘉信)', 'os': '總覽'}.get(x, x)
+        format_func=lambda x: {'jason': 'Jason', 'rita': 'Rita', 'ed': 'Ed (台股)', 'ed_combined': 'Ed (綜合)', 'os': '海外投資'}.get(x, x)
     )
     
     # 刷新按鈕
@@ -864,7 +864,7 @@ def main():
         st.rerun()
 
     if person == 'ed_combined':
-        st.header("Ed (國泰+嘉信)")
+        st.header("Ed (綜合投資總覽)")
         
         # 載入數據
         schwab_df = load_sheet_data('ed_combined', 'schwab')
@@ -878,7 +878,7 @@ def main():
         render_ed_combined_summary(schwab_total_usd, cathay_total_usd)
         
     else:
-        st.header(f"{person.capitalize()} 富邦英股")
+        st.header(f"{person.capitalize()} 投資總覽")
 
         # 載入數據
         holdings_df = load_sheet_data(person, 'holdings')
