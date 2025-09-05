@@ -9,7 +9,7 @@ import json
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 import re
-import time 
+import time
 import requests # 導入 requests 模組用於 API 呼叫
 
 # 頁面配置
@@ -246,12 +246,12 @@ st.markdown("""
         display: inline-block;
     }
     
-    .profit { 
-        color: #27ae60; 
+    .profit {
+        color: #27ae60;
         background: rgba(39, 174, 96, 0.1);
     }
-    .loss { 
-        color: #e74c3c; 
+    .loss {
+        color: #e74c3c;
         background: rgba(231, 76, 60, 0.1);
     }
     
@@ -436,7 +436,7 @@ def get_google_sheets_service():
             return None
         
         scoped_credentials = credentials.with_scopes([
-            'https://www.googleapis.com/auth/spreadsheets'
+            'https://www.googleapis.com/auth/spreadsheets.readonly' # 讀取只需讀取權限
         ])
         
         return build('sheets', 'v4', credentials=scoped_credentials)
@@ -519,7 +519,8 @@ def load_sheet_data(person, data_type, broker=None):
         ).execute()
         
         values = result.get('values', [])
-        if not values:
+        if not values or len(values) < 2:
+            st.warning(f"從 {person} {broker or data_type} 載入數據時發現資料為空或格式不正確 (沒有表頭)。")
             return pd.DataFrame()
         
         df = pd.DataFrame(values[1:], columns=values[0])
@@ -531,7 +532,7 @@ def load_sheet_data(person, data_type, broker=None):
                 if any(keyword in col for keyword in ['價', '成本', '市值', '損益', '股數', '率']):
                     numeric_columns.append(col)
         elif person == 'allocation_config':
-             numeric_columns = ['理想配置']
+            numeric_columns = ['理想配置']
         elif data_type == 'holdings':
             numeric_columns = [
                 '總投入成本', '總持有股數', '目前股價', 
@@ -618,8 +619,8 @@ def get_fubon_uk_total_value(fubon_df):
             elif '市值' in col and 'NTD' in col:
                 value_ntd_col = col
         
-        total_value_usd = fubon_df[value_usd_col].sum() if value_usd_col else 0
-        total_value_ntd = fubon_df[value_ntd_col].sum() if value_ntd_col else 0
+        total_value_usd = fubon_df[value_usd_col].sum() if value_usd_col and value_usd_col in fubon_df.columns else 0
+        total_value_ntd = fubon_df[value_ntd_col].sum() if value_ntd_col and value_ntd_col in fubon_df.columns else 0
         
         return total_value_usd, total_value_ntd
         
@@ -851,24 +852,47 @@ def render_asset_allocation_page():
     with st.spinner('正在從 Google Sheets 載入所有投資數據...'):
         rita_df = load_sheet_data('rita', 'holdings')
         ed_df = load_sheet_data('ed', 'holdings')
-        ed_overseas_df = load_sheet_data('ed_overseas', None, 'cathay')
+        
+        # 載入所有海外數據
+        schwab_df = load_sheet_data('ed_overseas', None, 'schwab')
+        cathay_df = load_sheet_data('ed_overseas', None, 'cathay')
+        fubon_df = load_sheet_data('ed_overseas', None, 'fubon_uk')
+        
         ideal_config_df = load_sheet_data('allocation_config', None)
 
     # 3. 數據處理與合併
     all_holdings = []
-
+    
     # 處理台股 (TWD)
-    for df in [rita_df, ed_df]:
-        if not df.empty and '種類' in df.columns and '目前總市值' in df.columns:
-            temp_df = df[['種類', '目前總市值']].copy()
-            temp_df.rename(columns={'目前總市值': '市值(TWD)'}, inplace=True)
-            all_holdings.append(temp_df)
+    if not rita_df.empty and '種類' in rita_df.columns and '目前總市值' in rita_df.columns:
+        temp_df = rita_df[['種類', '目前總市值']].copy()
+        temp_df.rename(columns={'目前總市值': '市值(TWD)'}, inplace=True)
+        all_holdings.append(temp_df)
+    
+    if not ed_df.empty and '種類' in ed_df.columns and '目前總市值' in ed_df.columns:
+        temp_df = ed_df[['種類', '目前總市值']].copy()
+        temp_df.rename(columns={'目前總市值': '市值(TWD)'}, inplace=True)
+        all_holdings.append(temp_df)
 
     # 處理海外 (USD)，並轉換為 TWD
-    if not ed_overseas_df.empty and '種類' in ed_overseas_df.columns and '目前總市值' in ed_overseas_df.columns:
-        temp_df = ed_overseas_df[['種類', '目前總市值']].copy()
-        temp_df['市值(TWD)'] = temp_df['目前總市值'] * usd_twd_rate
-        all_holdings.append(temp_df[['種類', '市值(TWD)']])
+    overseas_holdings = []
+    
+    if not schwab_df.empty:
+        schwab_value_usd = get_schwab_total_value(schwab_df)
+        overseas_holdings.append({'種類': '美股個股', '市值(USD)': schwab_value_usd})
+        
+    if not cathay_df.empty and '目前總市值' in cathay_df.columns:
+        cathay_value_usd = cathay_df['目前總市值'].sum()
+        overseas_holdings.append({'種類': '美股ETF', '市值(USD)': cathay_value_usd})
+        
+    if not fubon_df.empty:
+        fubon_value_usd, _ = get_fubon_uk_total_value(fubon_df)
+        overseas_holdings.append({'種類': '英股', '市值(USD)': fubon_value_usd})
+
+    if overseas_holdings:
+        overseas_df = pd.DataFrame(overseas_holdings)
+        overseas_df['市值(TWD)'] = overseas_df['市值(USD)'] * usd_twd_rate
+        all_holdings.append(overseas_df[['種類', '市值(TWD)']])
 
     if not all_holdings:
         st.error("無法載入任何有效的持股數據進行分析。請檢查 Google Sheets 內容與權限。")
@@ -877,24 +901,23 @@ def render_asset_allocation_page():
     # 合併所有 DataFrame
     combined_df = pd.concat(all_holdings, ignore_index=True)
     combined_df = combined_df[combined_df['市值(TWD)'] > 0]
+    
+    if combined_df.empty:
+        st.error("所有來源的資產總值都為零，無法進行配置分析。")
+        return
 
     # 4. 計算目前配置
     current_allocation = combined_df.groupby('種類')['市值(TWD)'].sum().reset_index()
     total_assets_twd = current_allocation['市值(TWD)'].sum()
-    
-    if total_assets_twd == 0:
-        st.warning("計算出的總資產為零，無法進行配置分析。")
-        return
-        
     current_allocation['目前配置'] = (current_allocation['市值(TWD)'] / total_assets_twd) * 100
 
     # 5. 合併理想配置
     if ideal_config_df.empty or '種類' not in ideal_config_df.columns or '理想配置' not in ideal_config_df.columns:
         st.error("無法載入理想配置數據，或格式不符。請檢查 '配置設定' 工作表。")
         return
-        
-    # 將理想配置中的百分比符號移除
-    ideal_config_df['理想配置'] = ideal_config_df['理想配置']
+    
+    # 確保理想配置列是數字
+    ideal_config_df['理想配置'] = ideal_config_df['理想配置'].apply(parse_number)
     
     final_df = pd.merge(current_allocation, ideal_config_df, on='種類', how='outer').fillna(0)
     final_df['差距'] = final_df['目前配置'] - final_df['理想配置']
@@ -966,114 +989,56 @@ def main():
         schwab_df = load_sheet_data('ed_overseas', None, 'schwab')
         cathay_df = load_sheet_data('ed_overseas', None, 'cathay')
         fubon_df = load_sheet_data('ed_overseas', None, 'fubon_uk')
-
+        
         schwab_total_usd = get_schwab_total_value(schwab_df)
         cathay_total_usd = get_cathay_total_value(cathay_df)
-        fubon_total_usd, fubon_total_ntd = get_fubon_uk_total_value(fubon_df)
+        fubon_total_usd, _ = get_fubon_uk_total_value(fubon_df)
         
-        render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_usd, fubon_total_ntd)
+        render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_usd, None)
         
-        tab1, tab2, tab3, tab4 = st.tabs(["🇺🇸 嘉信證券", "🇹🇼 國泰證券", "🇬🇧 富邦英股", "📊 綜合分析"])
+        st.divider()
+        st.subheader("嘉信證券持股明細")
+        render_overseas_holdings_table(schwab_df, "嘉信證券")
         
-        with tab1:
-            st.subheader("嘉信證券 - 美股個股")
-            
-            with st.form("schwab_append_form", clear_on_submit=True):
-                st.write("##### ✍️ 新增一筆市值紀錄")
-                c1, c2, c3 = st.columns([1, 1, 2])
-                with c1:
-                    record_date = st.date_input("紀錄日期", value=datetime.now())
-                with c2:
-                    market_value = st.number_input("總市值 (USD)", min_value=0.0, format="%.2f")
-                with c3:
-                    st.write("")
-                    st.write("")
-                    submitted = st.form_submit_button("新增至 Google Sheet")
+        st.subheader("國泰證券持股明細")
+        render_overseas_holdings_table(cathay_df, "國泰證券")
+        
+        st.subheader("富邦英股持股明細")
+        render_overseas_holdings_table(fubon_df, "富邦英股")
+        
+        # 海外資產配置圓餅圖
+        schwab_df_for_pie = schwab_df.rename(columns={'名稱': '股票名稱', '市值': '目前總市值'})
+        cathay_df_for_pie = cathay_df.rename(columns={'股票名稱': '股票名稱', '目前總市值': '目前總市值'})
+        fubon_df_for_pie = fubon_df.rename(columns={'股票名稱': '股票名稱', '目前總市值(USD)': '目前總市值'})
+        
+        combined_overseas_df = pd.concat([schwab_df_for_pie, cathay_df_for_pie, fubon_df_for_pie], ignore_index=True)
+        
+        st.divider()
+        st.subheader("海外資產配置圖")
+        render_portfolio_chart(combined_overseas_df, person)
 
-            if submitted:
-                sheet_id = SHEET_CONFIGS['ed_overseas']['schwab']['id']
-                worksheet_name = 'schwab'
-                date_str = record_date.strftime('%Y/%m/%d')
-                values_to_append = [[date_str, market_value]]
-                
-                success = append_to_sheet(sheet_id, worksheet_name, values_to_append)
-                
-                if success:
-                    st.success("紀錄已成功新增！正在重新整理數據...")
-                    time.sleep(1) 
-                    st.cache_data.clear() 
-                    st.rerun()
-                else:
-                    st.error("新增紀錄失敗，請檢查後台日誌或 API 權限。")
-            
-            st.divider()
-
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                render_overseas_portfolio_chart(schwab_df, "嘉信證券")
-                st.markdown('</div>', unsafe_allow_html=True)
-            with col2:
-                render_overseas_holdings_table(schwab_df, "嘉信證券")
-
-        with tab2:
-            st.subheader("國泰證券 - 美股ETF")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                render_overseas_portfolio_chart(cathay_df, "國泰證券")
-                st.markdown('</div>', unsafe_allow_html=True)
-            with col2:
-                render_overseas_holdings_table(cathay_df, "國泰證券")
-        
-        with tab3:
-            st.subheader("富邦證券 - 英股投資")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                render_overseas_portfolio_chart(fubon_df, "富邦英股")
-                st.markdown('</div>', unsafe_allow_html=True)
-            with col2:
-                render_overseas_holdings_table(fubon_df, "富邦英股")
-        
-        with tab4:
-            st.subheader("綜合投資分析")
-            platforms = ['嘉信證券', '國泰證券', '富邦英股']
-            values = [schwab_total_usd, cathay_total_usd, fubon_total_usd]
-            
-            fig = px.bar(
-                x=platforms, y=values, title='各平台投資總值比較 (USD)',
-                color=platforms, color_discrete_sequence=['#1f4e79', '#8b0000', '#2d3436']
-            )
-            fig.update_layout(showlegend=False, yaxis_title='總市值 (USD)')
-            st.plotly_chart(fig, use_container_width=True)
-            
-    # --- 新增 allocation 頁面的 elif 區塊 ---
     elif person == 'allocation':
         render_asset_allocation_page()
-
-    # --- 原有的台股投資人頁面 ---
-    else:
-        st.header(f"{person.capitalize()} 台股投資總覽")
+    else: # jason, rita, ed
+        st.header(f"{person.capitalize()} 投資總覽")
         
         holdings_df = load_sheet_data(person, 'holdings')
         dca_df = load_sheet_data(person, 'dca')
         trend_df = load_sheet_data(person, 'trend')
-
-        if not holdings_df.empty:
-            render_summary_cards(person, holdings_df, dca_df)
-            tab1, tab2, tab3 = st.tabs(["📈 持股明細", "🥧 資產配置", "📊 資產趨勢"])
-            with tab1:
-                st.subheader("持股明細")
-                render_holdings_table(holdings_df, person)
-            with tab2:
-                st.subheader("資產配置")
-                render_portfolio_chart(holdings_df, person)
-            with tab3:
-                st.subheader("資產趨勢")
-                render_trend_chart(trend_df)
-        else:
-            st.warning(f"無法載入 {person} 的投資數據，或數據為空。")
+        
+        render_summary_cards(person, holdings_df, dca_df)
+        
+        st.divider()
+        tab1, tab2, tab3 = st.tabs(["持股明細", "資產配置圖", "資產趨勢圖"])
+        
+        with tab1:
+            render_holdings_table(holdings_df, person)
+        
+        with tab2:
+            render_portfolio_chart(holdings_df, person)
+            
+        with tab3:
+            render_trend_chart(trend_df)
 
 if __name__ == "__main__":
     main()
