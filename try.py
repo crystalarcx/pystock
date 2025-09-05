@@ -377,7 +377,6 @@ def load_sheet_data(person, data_type):
         # 數據清理和轉換
         if person == 'os' and data_type == 'holdings':
             # 海外投資數據處理 - 根據實際column names調整
-            # 移除debug用的column顯示
             
             # 根據可能的column名稱映射
             column_mapping = {
@@ -570,6 +569,62 @@ def render_summary_cards(person, holdings_df, dca_df=None):
             </div>
             """, unsafe_allow_html=True)
 
+        with col2:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">目前市值</div>
+                <div class="metric-value">{format_currency(total_value)}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col3:
+            profit_class = 'profit' if total_pl >= 0 else 'loss'
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">未實現損益</div>
+                <div class="metric-value {profit_class}">{format_currency(total_pl)}</div>
+                <div class="metric-change {profit_class}">{format_percentage(total_return)}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col4:
+            # 修正DCA卡片的HTML渲染問題 - 使用純Streamlit組件
+            if dca_df is not None and not dca_df.empty:
+                # 檢查必要的欄位是否存在
+                required_dca_columns = ['股票代號', '股票名稱', '每月投入金額', '扣款日']
+                if all(col in dca_df.columns for col in required_dca_columns):
+                    # 使用純Streamlit的markdown和container來創建卡片效果
+                    with st.container():
+                        st.markdown("""
+                        <div class="dca-card">
+                            <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # 使用streamlit組件來顯示DCA項目
+                        for _, row in dca_df.iterrows():
+                            if pd.notna(row['股票代號']) and pd.notna(row['股票名稱']):
+                                st.markdown(f"""
+                                <div class="dca-item">
+                                    <strong>{row["股票代號"]} {row["股票名稱"]}</strong><br>
+                                    <small>每月{format_currency(row["每月投入金額"])} | {int(row["扣款日"])}號扣款</small>
+                                </div>
+                                """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                    <div class="dca-card">
+                        <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
+                        <div style="opacity: 0.8;">資料格式錯誤</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="dca-card">
+                    <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
+                    <div style="opacity: 0.8;">暫無設定資料</div>
+                </div>
+                """, unsafe_allow_html=True)
+
 def render_cathay_table(cathay_df):
     """渲染國泰證券持股表格"""
     st.markdown('<div class="chart-container">', unsafe_allow_html=True)
@@ -607,227 +662,10 @@ def render_cathay_table(cathay_df):
         
         # 設定顏色樣式
         def color_negative_red(val):
-            if isinstance(val, str) and ('-' in val and ('
-        
-        with col2:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">目前市值</div>
-                <div class="metric-value">{format_currency(total_value)}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            profit_class = 'profit' if total_pl >= 0 else 'loss'
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">未實現損益</div>
-                <div class="metric-value {profit_class}">{format_currency(total_pl)}</div>
-                <div class="metric-change {profit_class}">{format_percentage(total_return)}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            # 修正DCA卡片的HTML渲染問題 - 使用純Streamlit組件
-            if dca_df is not None and not dca_df.empty:
-                # 檢查必要的欄位是否存在
-                required_dca_columns = ['股票代號', '股票名稱', '每月投入金額', '扣款日']
-                if all(col in dca_df.columns for col in required_dca_columns):
-                    # 使用純Streamlit的markdown和container來創建卡片效果
-                    with st.container():
-                        st.markdown("""
-                        <div class="dca-card">
-                            <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # 使用streamlit組件來顯示DCA項目
-                        for _, row in dca_df.iterrows():
-                            if pd.notna(row['股票代號']) and pd.notna(row['股票名稱']):
-                                st.markdown(f"""
-                                <div class="dca-item">
-                                    <strong>{row["股票代號"]} {row["股票名稱"]}</strong><br>
-                                    <small>每月{format_currency(row["每月投入金額"])} | {int(row["扣款日"])}號扣款</small>
-                                </div>
-                                """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div class="dca-card">
-                        <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
-                        <div style="opacity: 0.8;">資料格式錯誤</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="dca-card">
-                    <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
-                    <div style="opacity: 0.8;">暫無設定資料</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-def render_combined_summary_cards(schwab_total, cathay_df):
-    """渲染綜合投資摘要卡片"""
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">嘉信證券總市值 (美元)</div>
-            <div class="metric-value">{format_currency(schwab_total, 'USD')}</div>
-            <div class="metric-change">美股個股投資</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        if not cathay_df.empty and 'F' in cathay_df.columns:
-            # 計算F欄位的總和（國泰證券目前總市值）
-            cathay_data = cathay_df['F'].dropna()
-            if len(cathay_data) > 0:
-                try:
-                    # 將F欄的所有數值加總
-                    cathay_total = sum([parse_number(val) for val in cathay_data if parse_number(val) > 0])
-                    
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">國泰證券定期定額總市值 (美元)</div>
-                        <div class="metric-value">{format_currency(cathay_total, 'USD')}</div>
-                        <div class="metric-change">台股定期定額</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                except:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">國泰證券定期定額</div>
-                        <div class="metric-value">資料讀取中...</div>
-                        <div class="metric-change">台股定期定額</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">國泰證券定期定額</div>
-                    <div class="metric-value">無資料</div>
-                    <div class="metric-change">台股定期定額</div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">國泰證券定期定額</div>
-                <div class="metric-value">載入中...</div>
-                <div class="metric-change">台股定期定額</div>
-            </div in val or 'NT
-        
-        with col2:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">目前市值</div>
-                <div class="metric-value">{format_currency(total_value)}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            profit_class = 'profit' if total_pl >= 0 else 'loss'
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">未實現損益</div>
-                <div class="metric-value {profit_class}">{format_currency(total_pl)}</div>
-                <div class="metric-change {profit_class}">{format_percentage(total_return)}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            # 修正DCA卡片的HTML渲染問題 - 使用純Streamlit組件
-            if dca_df is not None and not dca_df.empty:
-                # 檢查必要的欄位是否存在
-                required_dca_columns = ['股票代號', '股票名稱', '每月投入金額', '扣款日']
-                if all(col in dca_df.columns for col in required_dca_columns):
-                    # 使用純Streamlit的markdown和container來創建卡片效果
-                    with st.container():
-                        st.markdown("""
-                        <div class="dca-card">
-                            <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # 使用streamlit組件來顯示DCA項目
-                        for _, row in dca_df.iterrows():
-                            if pd.notna(row['股票代號']) and pd.notna(row['股票名稱']):
-                                st.markdown(f"""
-                                <div class="dca-item">
-                                    <strong>{row["股票代號"]} {row["股票名稱"]}</strong><br>
-                                    <small>每月{format_currency(row["每月投入金額"])} | {int(row["扣款日"])}號扣款</small>
-                                </div>
-                                """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div class="dca-card">
-                        <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
-                        <div style="opacity: 0.8;">資料格式錯誤</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="dca-card">
-                    <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
-                    <div style="opacity: 0.8;">暫無設定資料</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-def render_combined_summary_cards(schwab_total, cathay_df):
-    """渲染綜合投資摘要卡片"""
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">嘉信證券總市值 (美元)</div>
-            <div class="metric-value">{format_currency(schwab_total, 'USD')}</div>
-            <div class="metric-change">美股個股投資</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        if not cathay_df.empty and 'F' in cathay_df.columns:
-            # 計算F欄位的總和（國泰證券目前總市值）
-            cathay_data = cathay_df['F'].dropna()
-            if len(cathay_data) > 0:
-                try:
-                    # 將F欄的所有數值加總
-                    cathay_total = sum([parse_number(val) for val in cathay_data if parse_number(val) > 0])
-                    
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">國泰證券定期定額總市值 (美元)</div>
-                        <div class="metric-value">{format_currency(cathay_total, 'USD')}</div>
-                        <div class="metric-change">台股定期定額</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                except:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">國泰證券定期定額</div>
-                        <div class="metric-value">資料讀取中...</div>
-                        <div class="metric-change">台股定期定額</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">國泰證券定期定額</div>
-                    <div class="metric-value">無資料</div>
-                    <div class="metric-change">台股定期定額</div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">國泰證券定期定額</div>
-                <div class="metric-value">載入中...</div>
-                <div class="metric-change">台股定期定額</div>
-            </div in val)):
+            # 修正此處的語法錯誤
+            if isinstance(val, str) and ('-' in val or 'NT$-' in val):
                 return 'color: #e74c3c; font-weight: bold'
-            elif isinstance(val, str) and '+' in val and '%' in val:
+            elif isinstance(val, str) and ('+' in val or 'NT$+' in val):
                 return 'color: #27ae60; font-weight: bold'
             return ''
         
@@ -838,6 +676,60 @@ def render_combined_summary_cards(schwab_total, cathay_df):
         st.error(f"國泰證券表格渲染錯誤: {e}")
     
     st.markdown('</div>', unsafe_allow_html=True)
+
+def render_combined_summary_cards(schwab_total, cathay_df):
+    """渲染綜合投資摘要卡片"""
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-label">嘉信證券總市值 (美元)</div>
+            <div class="metric-value">{format_currency(schwab_total, 'USD')}</div>
+            <div class="metric-change">美股個股投資</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        if not cathay_df.empty and 'F' in cathay_df.columns:
+            # 計算F欄位的總和（國泰證券目前總市值）
+            cathay_data = cathay_df['F'].dropna()
+            if len(cathay_data) > 0:
+                try:
+                    # 將F欄的所有數值加總
+                    cathay_total = sum([parse_number(val) for val in cathay_data if parse_number(val) > 0])
+                    
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">國泰證券定期定額總市值 (美元)</div>
+                        <div class="metric-value">{format_currency(cathay_total, 'USD')}</div>
+                        <div class="metric-change">台股定期定額</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                except:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">國泰證券定期定額</div>
+                        <div class="metric-value">資料讀取中...</div>
+                        <div class="metric-change">台股定期定額</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-label">國泰證券定期定額</div>
+                    <div class="metric-value">無資料</div>
+                    <div class="metric-change">台股定期定額</div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">國泰證券定期定額</div>
+                <div class="metric-value">載入中...</div>
+                <div class="metric-change">台股定期定額</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 def render_charts(person, holdings_df):
     """渲染圖表"""
@@ -910,419 +802,213 @@ def render_charts(person, holdings_df):
         
         with col1:
             st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-            st.subheader("投資組合分佈")
-            holdings_df['股票標籤'] = holdings_df['股票代號'] + ' ' + holdings_df['股票名稱']
+            st.subheader("投資組合市值分佈")
             fig_portfolio = px.pie(
                 values=holdings_df['目前總市值'],
-                names=holdings_df['股票標籤'],
+                names=holdings_df['股票名稱'],
                 color_discrete_sequence=px.colors.qualitative.Set3
             )
-            # 移除圓餅圖內的標籤
-            fig_portfolio.update_traces(textposition='outside', textinfo='percent')
-            fig_portfolio.update_layout(height=400, showlegend=True)
+            fig_portfolio.update_traces(textposition='outside', textinfo='percent+label')
+            fig_portfolio.update_layout(height=400, showlegend=False)
             st.plotly_chart(fig_portfolio, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
         
         with col2:
             st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-            st.subheader("損益分析")
-            # 創建顏色列表 - 正值藍色，負值紅色
-            colors = ['#3498db' if val >= 0 else '#e74c3c' for val in holdings_df['未實現損益']]
-            
+            st.subheader("未實現損益分析")
+            colors = ['#27ae60' if val >= 0 else '#e74c3c' for val in holdings_df['未實現損益']]
             fig_pl = px.bar(
-                x=holdings_df['股票標籤'],
+                x=holdings_df['股票名稱'],
                 y=holdings_df['未實現損益'],
                 color=holdings_df['未實現損益'],
-                color_discrete_map={val: color for val, color in zip(holdings_df['未實現損益'], colors)},
-                color_continuous_scale=None
+                color_continuous_scale=px.colors.sequential.Bluyl_r
             )
-            # 手動設置顏色
             fig_pl.update_traces(marker_color=colors)
             fig_pl.update_layout(
                 height=400,
-                yaxis_title="損益 (NTD)",
+                yaxis_title="損益",
                 xaxis_title="股票",
                 showlegend=False
             )
             st.plotly_chart(fig_pl, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-def render_trend_chart(person, trend_df):
+def render_trends_chart(trend_df):
     """渲染資產趨勢圖表"""
+    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+    st.subheader("總資產趨勢")
+    
     if trend_df.empty:
-        return
-    
-    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-    st.subheader("📈 資產趨勢變化")
-    
-    # 計算變化
-    trend_df['變化金額'] = trend_df['總市值'].diff()
-    trend_df['變化百分比'] = trend_df['總市值'].pct_change() * 100
-    
-    # 計算Y軸的範圍，以1000為單位調整scale
-    min_val = trend_df['總市值'].min()
-    max_val = trend_df['總市值'].max()
-    
-    # 向下取整到最近的1000
-    y_min = (min_val // 1000) * 1000
-    # 向上取整到最近的1000  
-    y_max = ((max_val // 1000) + 1) * 1000
-    
-    # 如果範圍太小，強制設定最小範圍
-    if y_max - y_min < 5000:
-        center = (y_min + y_max) / 2
-        y_min = center - 2500
-        y_max = center + 2500
-    
-    fig = go.Figure()
-    
-    fig.add_trace(go.Scatter(
-        x=trend_df['日期'],
-        y=trend_df['總市值'],
-        mode='lines+markers',
-        name='總資產價值',
-        line=dict(color='#3498db', width=3),
-        marker=dict(size=8, color='#3498db'),
-        fill='tonexty',
-        fillcolor='rgba(52, 152, 219, 0.1)',
-        hovertemplate='<b>%{x}</b><br>總資產: NT$%{y:,.0f}<extra></extra>'
-    ))
-    
-    fig.update_layout(
-        height=400,
-        yaxis_title="資產價值 (NTD)",
-        xaxis_title="日期",
-        hovermode='x unified',
-        showlegend=False,
-        yaxis=dict(
-            range=[y_min, y_max],
-            tickformat=',.0f'
-        ),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-def render_holdings_table(person, holdings_df):
-    """渲染持股表格"""
-    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-    st.subheader("持股明細")
-    
-    if holdings_df.empty:
-        st.warning("無持股數據")
+        st.warning("無資產趨勢數據")
         st.markdown('</div>', unsafe_allow_html=True)
         return
-    
-    if person == 'os':
-        # 海外投資表格 - 動態處理欄位
-        display_df = holdings_df.copy()
         
-        # 格式化數字欄位
-        for col in display_df.columns:
-            if any(keyword in col for keyword in ['價', '成本', '市值', '損益']):
-                if 'USD' in col:
-                    display_df[col] = display_df[col].apply(lambda x: format_currency(x, 'USD'))
-                elif 'NTD' in col:
-                    display_df[col] = display_df[col].apply(lambda x: format_currency(x, 'TWD'))
-            elif '率' in col and '%' not in col:
-                display_df[col] = display_df[col].apply(format_percentage)
+    try:
+        # 轉換日期格式
+        trend_df['日期'] = pd.to_datetime(trend_df['日期'], format='%Y/%m/%d')
         
-        # 設定顏色樣式
-        def color_negative_red(val):
-            if isinstance(val, str) and ('$-' in val or 'NT$-' in val or val.startswith('-')):
-                return 'color: #e74c3c; font-weight: bold'
-            elif isinstance(val, str) and ('+' in val and '%' in val):
-                return 'color: #27ae60; font-weight: bold'
-            return ''
+        fig = px.line(
+            trend_df,
+            x='日期',
+            y='總市值',
+            markers=True,
+            line_shape='spline',
+            labels={'總市值': '總市值 (NT$)', '日期': '日期'}
+        )
+        fig.update_traces(
+            line=dict(color='#3498db', width=3),
+            marker=dict(color='#2980b9', size=8, line=dict(width=1, color='DarkSlateGrey'))
+        )
+        fig.update_layout(
+            height=400,
+            xaxis_title="",
+            yaxis_title="總市值 (NT$)",
+            hovermode="x unified",
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=False)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"資產趨勢圖表渲染錯誤: {e}")
+        st.info("請確認趨勢數據的日期和市值格式是否正確")
         
-        styled_df = display_df.style.applymap(color_negative_red)
-        st.dataframe(styled_df, use_container_width=True, hide_index=True)
-    
-    else:
-        # 台股表格
-        display_df = holdings_df.copy()
-        
-        # 先格式化數值欄位，再創建標籤欄位
-        format_columns = {
-            '目前股價': format_stock_price,
-            '總持有股數': format_shares,
-            '總投入成本': lambda x: format_currency(x, 'TWD'),
-            '目前總市值': lambda x: format_currency(x, 'TWD'),
-            '未實現損益': lambda x: format_currency(x, 'TWD'),
-            '報酬率': format_percentage
-        }
-        
-        # 應用格式化
-        for col, formatter in format_columns.items():
-            if col in display_df.columns:
-                display_df[col] = display_df[col].apply(formatter)
-        
-        # 創建持股標籤
-        display_df['持股標籤'] = display_df['股票代號'] + ' ' + display_df['股票名稱']
-        
-        # 重新排序欄位
-        column_order = ['持股標籤', '總持有股數', '目前股價', '總投入成本', '目前總市值', '未實現損益', '報酬率']
-        display_df = display_df[column_order]
-        
-        # 設定顏色樣式
-        def color_negative_red(val):
-            if isinstance(val, str) and ('NT$-' in val or val.startswith('-')):
-                return 'color: #e74c3c; font-weight: bold'
-            elif isinstance(val, str) and '+' in val and '%' in val:
-                return 'color: #27ae60; font-weight: bold'
-            return ''
-        
-        styled_df = display_df.style.applymap(color_negative_red)
-        st.dataframe(styled_df, use_container_width=True, hide_index=True)
-    
     st.markdown('</div>', unsafe_allow_html=True)
 
 def main():
-    # 主標題
+    """主函數"""
+    # 設置網站標題
     st.markdown("""
-    <div class="hero-section">
-        <h1 class="hero-title">投資總覽</h1>
-        <p class="hero-subtitle">Jason • Rita • Ed • 富邦英股 • 綜合投資</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # 分頁標籤
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🚘 Jason定期定額", "👩🏻 Rita定期定額", "👨🏻 Ed定期定額", "🇬🇧 富邦英股總覽", "📊 嘉信+國泰綜合"])
-    
-    with tab1:
-        st.markdown("## Jason 定期定額投資")
-        
-        # 更新按鈕置於右上角
-        col1, col2 = st.columns([4, 1])
-        with col2:
-            if st.button("🔄 更新數據", key="jason_update"):
-                st.cache_data.clear()
-                st.rerun()
-        
-        with st.spinner("載入Jason投資數據..."):
-            holdings_df = load_sheet_data('jason', 'holdings')
-            dca_df = load_sheet_data('jason', 'dca')
-            trend_df = load_sheet_data('jason', 'trend')
-        
-        if not holdings_df.empty:
-            render_summary_cards('jason', holdings_df, dca_df)
-            
-            if not trend_df.empty:
-                render_trend_chart('jason', trend_df)
-            
-            render_charts('jason', holdings_df)
-            render_holdings_table('jason', holdings_df)
-        else:
-            st.error("無法載入Jason的投資數據，請檢查Google Sheets連接")
-    
-    with tab2:
-        st.markdown("## Rita 定期定額投資")
-        
-        # 更新按鈕置於右上角
-        col1, col2 = st.columns([4, 1])
-        with col2:
-            if st.button("🔄 更新數據", key="rita_update"):
-                st.cache_data.clear()
-                st.rerun()
-        
-        with st.spinner("載入Rita投資數據..."):
-            holdings_df = load_sheet_data('rita', 'holdings')
-            dca_df = load_sheet_data('rita', 'dca')
-            trend_df = load_sheet_data('rita', 'trend')
-        
-        if not holdings_df.empty:
-            render_summary_cards('rita', holdings_df, dca_df)
-            
-            if not trend_df.empty:
-                render_trend_chart('rita', trend_df)
-            
-            render_charts('rita', holdings_df)
-            render_holdings_table('rita', holdings_df)
-        else:
-            st.error("無法載入Rita的投資數據，請檢查Google Sheets連接")
-    
-    with tab3:
-        st.markdown("## Ed 定期定額投資")
-        
-        # 更新按鈕置於右上角
-        col1, col2 = st.columns([4, 1])
-        with col2:
-            if st.button("🔄 更新數據", key="ed_update"):
-                st.cache_data.clear()
-                st.rerun()
-        
-        with st.spinner("載入Ed投資數據..."):
-            holdings_df = load_sheet_data('ed', 'holdings')
-            dca_df = load_sheet_data('ed', 'dca')
-            trend_df = load_sheet_data('ed', 'trend')
-        
-        if not holdings_df.empty:
-            render_summary_cards('ed', holdings_df, dca_df)
-            
-            if not trend_df.empty:
-                render_trend_chart('ed', trend_df)
-            
-            render_charts('ed', holdings_df)
-            render_holdings_table('ed', holdings_df)
-        else:
-            st.warning("Ed的Google Sheets ID尚未設定，或無法載入投資數據")
-    
-    with tab4:
-        st.markdown("## 富邦英股 海外投資")
-        
-        # 更新按鈕置於右上角
-        col1, col2 = st.columns([4, 1])
-        with col2:
-            if st.button("🔄 更新數據", key="os_update"):
-                st.cache_data.clear()
-                st.rerun()
-        
-        with st.spinner("載入海外投資數據..."):
-            holdings_df = load_sheet_data('os', 'holdings')
-        
-        if not holdings_df.empty:
-            render_summary_cards('os', holdings_df)
-            render_charts('os', holdings_df)
-            render_holdings_table('os', holdings_df)
-        else:
-            st.error("無法載入海外投資數據，請檢查Google Sheets連接")
-    
-    with tab5:
-        st.markdown("## 嘉信證券 + 國泰證券 綜合投資")
-        
-        # 更新按鈕置於右上角
-        col1, col2 = st.columns([4, 1])
-        with col2:
-            if st.button("🔄 更新數據", key="combined_update"):
-                st.cache_data.clear()
-                st.rerun()
-        
-        with st.spinner("載入綜合投資數據..."):
-            # 獲取嘉信證券總市值
+        <div class="hero-section">
+            <h1 class="hero-title">📈 投資總覽儀表板</h1>
+            <p class="hero-subtitle">快速查看您的投資組合表現</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 選擇投資人
+    person = st.selectbox(
+        '請選擇要查看的投資人',
+        ['jason', 'rita', 'ed', 'os', 'combined'],
+        format_func=lambda x: x.upper()
+    )
+
+    # 按鈕
+    st.sidebar.button('更新數據', on_click=lambda: st.cache_data.clear(), key="update_button")
+
+    # 根據選擇載入數據
+    with st.spinner("正在從 Google Sheets 載入數據..."):
+        if person == 'combined':
             schwab_total = get_schwab_total_value()
+            cathay_df = load_sheet_data(person, 'cathay')
             
-            # 獲取國泰證券數據
-            cathay_df = load_sheet_data('combined', 'cathay')
-        
-        # 顯示摘要卡片
-        render_combined_summary_cards(schwab_total, cathay_df)
-        
-        # 只顯示國泰證券表格（已刪除分佈圖）
-        if not cathay_df.empty:
-            render_cathay_table(cathay_df)
+            # 渲染綜合總覽卡片
+            render_combined_summary_cards(schwab_total, cathay_df)
+
+            tab1, tab2 = st.tabs(["嘉信證券", "國泰證券"])
+            with tab1:
+                schwab_df = load_sheet_data(person, 'schwab')
+                if not schwab_df.empty:
+                    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+                    st.subheader("嘉信證券持股明細")
+                    st.dataframe(schwab_df, use_container_width=True, hide_index=True)
+                    st.markdown('</div>', unsafe_allow_html=True)
+                else:
+                    st.warning("嘉信證券無數據")
+            with tab2:
+                if not cathay_df.empty:
+                    render_cathay_table(cathay_df)
+                else:
+                    st.warning("國泰證券無數據")
+
         else:
-            st.warning("無法載入國泰證券數據，請檢查Google Sheets連接")
+            holdings_df = load_sheet_data(person, 'holdings')
+            dca_df = load_sheet_data(person, 'dca')
+            trend_df = load_sheet_data(person, 'trend')
+
+            if not holdings_df.empty:
+                tab1, tab2, tab3 = st.tabs(["投資總覽", "圖表分析", "定期定額設定"])
+                
+                with tab1:
+                    render_summary_cards(person, holdings_df, dca_df)
+                    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+                    st.subheader("持股明細")
+                    # 格式化表格
+                    df_display = holdings_df.copy()
+                    
+                    # 根據不同的投資人設定不同的格式化欄位
+                    if person == 'os':
+                        # OS海外投資
+                        pl_col = None
+                        for col in holdings_df.columns:
+                            if '未實現' in col and 'USD' in col and '損益' in col:
+                                pl_col = col
+                                break
+                        
+                        if pl_col:
+                            # 格式化數字為貨幣
+                            for col in ['總投入成本(USD)', '目前總市值(USD)', '未實現損益(USD)', '投資損益(不計匯差,NTD)', '匯率損益(NTD)', '總未實現損益(計算匯差,NTD)']:
+                                if col in df_display.columns:
+                                    df_display[col] = df_display[col].apply(lambda x: format_currency(x, 'USD') if 'USD' in col else format_currency(x, 'TWD'))
+                            
+                            def color_pl(val):
+                                if isinstance(val, str):
+                                    # 修正判斷邏輯
+                                    is_negative = '-' in val and 'NT$-' in val
+                                    is_positive = '+' in val
+                                    if is_negative:
+                                        return 'color: #e74c3c; font-weight: bold'
+                                    elif is_positive:
+                                        return 'color: #27ae60; font-weight: bold'
+                                return ''
+
+                            styled_df = df_display.style.applymap(color_pl, subset=[pl_col])
+                            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                        else:
+                            st.dataframe(df_display, use_container_width=True, hide_index=True)
+                            
+                    else:
+                        # 台股
+                        df_display['目前股價'] = df_display['目前股價'].apply(format_stock_price)
+                        df_display['總持有股數'] = df_display['總持有股數'].apply(format_shares)
+                        df_display['報酬率'] = df_display['報酬率'].apply(format_percentage)
+                        df_display['總投入成本'] = df_display['總投入成本'].apply(format_currency)
+                        df_display['目前總市值'] = df_display['目前總市值'].apply(format_currency)
+                        df_display['未實現損益'] = df_display['未實現損益'].apply(format_currency)
+                        
+                        def color_pl(val):
+                            if isinstance(val, str) and 'NT$-' in val:
+                                return 'color: #e74c3c; font-weight: bold'
+                            elif isinstance(val, str) and 'NT$+' in val:
+                                return 'color: #27ae60; font-weight: bold'
+                            return ''
+                        
+                        def color_return_rate(val):
+                            if isinstance(val, str) and '-' in val:
+                                return 'color: #e74c3c; font-weight: bold'
+                            elif isinstance(val, str) and '+' in val:
+                                return 'color: #27ae60; font-weight: bold'
+                            return ''
+                            
+                        styled_df = df_display.style.applymap(color_pl, subset=['未實現損益']).applymap(color_return_rate, subset=['報酬率'])
+                        
+                        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                    
+                    st.markdown('</div>', unsafe_allow_html=True)
+                
+                with tab2:
+                    render_charts(person, holdings_df)
+                    if not trend_df.empty:
+                        render_trends_chart(trend_df)
+                
+                with tab3:
+                    if not dca_df.empty:
+                        st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+                        st.subheader("定期定額投資計畫")
+                        st.dataframe(dca_df, use_container_width=True, hide_index=True)
+                        st.markdown('</div>', unsafe_allow_html=True)
+                    else:
+                        st.info("無定期定額設定數據。")
+            else:
+                st.warning("目前無數據可顯示，請檢查 Google Sheets 是否有資料。")
 
 if __name__ == "__main__":
     main()
-        
-        with col2:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">目前市值</div>
-                <div class="metric-value">{format_currency(total_value)}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            profit_class = 'profit' if total_pl >= 0 else 'loss'
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">未實現損益</div>
-                <div class="metric-value {profit_class}">{format_currency(total_pl)}</div>
-                <div class="metric-change {profit_class}">{format_percentage(total_return)}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            # 修正DCA卡片的HTML渲染問題 - 使用純Streamlit組件
-            if dca_df is not None and not dca_df.empty:
-                # 檢查必要的欄位是否存在
-                required_dca_columns = ['股票代號', '股票名稱', '每月投入金額', '扣款日']
-                if all(col in dca_df.columns for col in required_dca_columns):
-                    # 使用純Streamlit的markdown和container來創建卡片效果
-                    with st.container():
-                        st.markdown("""
-                        <div class="dca-card">
-                            <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-                        
-                        # 使用streamlit組件來顯示DCA項目
-                        for _, row in dca_df.iterrows():
-                            if pd.notna(row['股票代號']) and pd.notna(row['股票名稱']):
-                                st.markdown(f"""
-                                <div class="dca-item">
-                                    <strong>{row["股票代號"]} {row["股票名稱"]}</strong><br>
-                                    <small>每月{format_currency(row["每月投入金額"])} | {int(row["扣款日"])}號扣款</small>
-                                </div>
-                                """, unsafe_allow_html=True)
-                else:
-                    st.markdown(f"""
-                    <div class="dca-card">
-                        <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
-                        <div style="opacity: 0.8;">資料格式錯誤</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="dca-card">
-                    <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📅 定期定額設定</div>
-                    <div style="opacity: 0.8;">暫無設定資料</div>
-                </div>
-                """, unsafe_allow_html=True)
-
-def render_combined_summary_cards(schwab_total, cathay_df):
-    """渲染綜合投資摘要卡片"""
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">嘉信證券總市值 (美元)</div>
-            <div class="metric-value">{format_currency(schwab_total, 'USD')}</div>
-            <div class="metric-change">美股個股投資</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        if not cathay_df.empty and 'F' in cathay_df.columns:
-            # 計算F欄位的總和（國泰證券目前總市值）
-            cathay_data = cathay_df['F'].dropna()
-            if len(cathay_data) > 0:
-                try:
-                    # 將F欄的所有數值加總
-                    cathay_total = sum([parse_number(val) for val in cathay_data if parse_number(val) > 0])
-                    
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">國泰證券定期定額總市值 (美元)</div>
-                        <div class="metric-value">{format_currency(cathay_total, 'USD')}</div>
-                        <div class="metric-change">台股定期定額</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                except:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">國泰證券定期定額</div>
-                        <div class="metric-value">資料讀取中...</div>
-                        <div class="metric-change">台股定期定額</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="metric-card">
-                    <div class="metric-label">國泰證券定期定額</div>
-                    <div class="metric-value">無資料</div>
-                    <div class="metric-change">台股定期定額</div>
-                </div>
-                """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">國泰證券定期定額</div>
-                <div class="metric-value">載入中...</div>
-                <div class="metric-change">台股定期定額</div>
-            </div
