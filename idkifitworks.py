@@ -674,4 +674,239 @@ def render_ed_combined_summary(schwab_total_usd, cathay_total_usd):
         """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown(
+        st.markdown(f"""
+        <div class="cathay-card">
+            <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; opacity: 0.9;">🇹🇼 國泰證券</div>
+            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;">{format_currency(cathay_total_usd, 'USD')}</div>
+            <div style="opacity: 0.8;">美股ETF總市值</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div class="metric-card" style="border: none; background: #e8f5e9;">
+            <div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #388e3c; opacity: 0.9;">總資產</div>
+            <div style="font-size: 2.5rem; font-weight: 700; color: #1b5e20; margin-bottom: 0.5rem;">{format_currency(total_combined, 'USD')}</div>
+            <div style="opacity: 0.8;">嘉信 + 國泰</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def render_holdings_table(holdings_df, person):
+    """渲染持股表格"""
+    if holdings_df.empty:
+        st.info("查無持股數據。")
+        return
+    
+    if person == 'os':
+        # Overseas investment table
+        # Rename columns to be more readable for display
+        display_df = holdings_df.rename(columns={
+            '目前美價': '美價(USD)',
+            '總持有股數': '股數',
+            '總投入成本(USD)': '成本(USD)',
+            '目前總市值(USD)': '市值(USD)',
+            '未實現損益(USD)': '損益(USD)',
+            '未實現報酬率': '報酬率%',
+            '總未實現損益%': '總報酬率%'
+        })
+        
+        # Select and order columns for display
+        display_columns = [
+            '股票代號', '股票名稱', '美價(USD)', '股數', 
+            '成本(USD)', '市值(USD)', '損益(USD)', '報酬率%'
+        ]
+        
+        # Ensure selected columns exist
+        display_columns = [col for col in display_columns if col in display_df.columns]
+        
+        st.dataframe(
+            display_df[display_columns].style.format({
+                '美價(USD)': "{:.2f}",
+                '股數': "{:,.0f}",
+                '成本(USD)': "${:,.0f}",
+                '市值(USD)': "${:,.0f}",
+                '損益(USD)': "${:,.0f}",
+                '報酬率%': "{:,.2f}%"
+            }),
+            use_container_width=True
+        )
+        
+    elif person == 'ed_combined':
+        # Ed's combined holdings table is handled differently, this block is for jason, rita, ed
+        # Combine the schwab and cathay dfs if needed, but the prompt shows them separately
+        st.warning("Ed's detailed holdings data is not supported in this table view.")
+
+    else:
+        # Taiwan stock investment table
+        st.dataframe(
+            holdings_df.style.format({
+                '目前股價': "{:.2f}",
+                '總持有股數': "{:,.0f}",
+                '總投入成本': "NT${:,.0f}",
+                '目前總市值': "NT${:,.0f}",
+                '未實現損益': "NT${:,.0f}",
+                '報酬率': "{:,.2f}%"
+            }),
+            use_container_width=True
+        )
+    
+def render_portfolio_chart(holdings_df, person):
+    """渲染投資組合圓餅圖和長條圖"""
+    if holdings_df.empty:
+        return
+    
+    if person == 'os':
+        # 海外投資圖表
+        try:
+            # 找到市值欄位
+            value_col = None
+            for col in holdings_df.columns:
+                if '市值' in col and 'USD' in col:
+                    value_col = col
+                    break
+            
+            if not value_col:
+                st.warning("找不到市值欄位，無法繪製圖表。")
+                return
+
+            portfolio_df = holdings_df[['股票名稱', value_col]].copy()
+            portfolio_df = portfolio_df[portfolio_df[value_col] > 0]
+            
+            fig = px.pie(
+                portfolio_df, 
+                values=value_col, 
+                names='股票名稱', 
+                title='資產配置 (按市值)',
+                hole=0.4,
+                color_discrete_sequence=px.colors.sequential.Plasma_r
+            )
+            fig.update_traces(textinfo='percent+label', pull=[0.1]*len(portfolio_df))
+            st.plotly_chart(fig, use_container_width=True)
+
+        except Exception as e:
+            st.error(f"海外投資圖表繪製失敗: {e}")
+            
+    elif person == 'ed_combined':
+        # Ed's combined chart
+        st.warning("Ed's combined portfolio chart is not supported in this view.")
+        
+    else:
+        # 台股投資圖表
+        portfolio_df = holdings_df[['股票名稱', '目前總市值']].copy()
+        portfolio_df = portfolio_df[portfolio_df['目前總市值'] > 0]
+        
+        fig = px.pie(
+            portfolio_df, 
+            values='目前總市值', 
+            names='股票名稱', 
+            title='資產配置 (按市值)',
+            hole=0.4,
+            color_discrete_sequence=px.colors.sequential.Agsunset
+        )
+        fig.update_traces(textinfo='percent+label', pull=[0.1]*len(portfolio_df))
+        st.plotly_chart(fig, use_container_width=True)
+    
+def render_trend_chart(trend_df):
+    """渲染資產趨勢圖"""
+    if trend_df.empty:
+        st.info("查無資產趨勢數據。")
+        return
+    
+    try:
+        # 清理和轉換數據
+        trend_df = trend_df.copy()
+        trend_df['日期'] = pd.to_datetime(trend_df['日期'])
+        trend_df['總市值'] = trend_df['總市值'].apply(parse_number)
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=trend_df['日期'], 
+            y=trend_df['總市值'], 
+            mode='lines+markers', 
+            name='總市值',
+            line=dict(color='#3498db', width=3),
+            marker=dict(size=8, color='#3498db', line=dict(width=1, color='DarkSlateGrey'))
+        ))
+        
+        fig.update_layout(
+            title='資產趨勢',
+            xaxis_title='日期',
+            yaxis_title='總市值 (NT$)',
+            hovermode='x unified',
+            template="plotly_white"
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error(f"資產趨勢圖繪製失敗: {e}")
+        st.write("數據預覽:", trend_df)
+
+def main():
+    """主要應用程式邏輯"""
+    
+    st.markdown("""
+    <div class="hero-section">
+        <h1 class="hero-title">📈 投資儀表板</h1>
+        <p class="hero-subtitle">快速掌握個人資產概況與趨勢</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 用戶選擇
+    person = st.selectbox(
+        "選擇投資者",
+        ['jason', 'rita', 'ed', 'ed_combined', 'os'],
+        format_func=lambda x: {'jason': 'Jason', 'rita': 'Rita', 'ed': 'Ed (台股)', 'ed_combined': 'Ed (綜合)', 'os': '海外投資'}.get(x, x)
+    )
+    
+    # 刷新按鈕
+    if st.button('更新數據', key='refresh_button'):
+        st.cache_data.clear()
+        st.rerun()
+
+    if person == 'ed_combined':
+        st.header("Ed (綜合投資總覽)")
+        
+        # 載入數據
+        schwab_df = load_sheet_data('ed_combined', 'schwab')
+        cathay_df = load_sheet_data('ed_combined', 'cathay')
+
+        # 處理並計算總值
+        schwab_total_usd = get_schwab_total_value(schwab_df)
+        cathay_total_usd = get_cathay_total_value(cathay_df)
+        
+        # 渲染摘要
+        render_ed_combined_summary(schwab_total_usd, cathay_total_usd)
+        
+    else:
+        st.header(f"{person.capitalize()} 投資總覽")
+
+        # 載入數據
+        holdings_df = load_sheet_data(person, 'holdings')
+        dca_df = load_sheet_data(person, 'dca')
+        trend_df = load_sheet_data(person, 'trend')
+
+        if holdings_df.empty:
+            st.warning("無法載入數據，請檢查Google Sheets設定和連線。")
+        else:
+            # 渲染摘要卡片
+            render_summary_cards(person, holdings_df, dca_df)
+            
+            # 使用標籤頁組織內容
+            tab1, tab2, tab3 = st.tabs(["📊 資產配置", "📈 損益表", "🗓️ 歷史趨勢"])
+            
+            with tab1:
+                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+                render_portfolio_chart(holdings_df, person)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            with tab2:
+                st.subheader("持股詳細列表")
+                render_holdings_table(holdings_df, person)
+            
+            with tab3:
+                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+                render_trend_chart(trend_df)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+if __name__ == "__main__":
+    main()
