@@ -661,9 +661,9 @@ def get_asset_allocation_data():
         asset_allocation = {}
         
         # Rita台股投資
-        if not rita_df.empty and '種類' in rita_df.columns:
+        if not rita_df.empty and '類型' in rita_df.columns:
             for _, row in rita_df.iterrows():
-                category = row.get('種類', '').strip()
+                category = row.get('類型', '').strip()
                 if category:
                     market_value = parse_number(row.get('目前總市值', 0))
                     if category in asset_allocation:
@@ -672,9 +672,9 @@ def get_asset_allocation_data():
                         asset_allocation[category] = market_value
         
         # ED台股投資
-        if not ed_df.empty and '種類' in ed_df.columns:
+        if not ed_df.empty and '類型' in ed_df.columns:
             for _, row in ed_df.iterrows():
-                category = row.get('種類', '').strip()
+                category = row.get('類型', '').strip()
                 if category:
                     market_value = parse_number(row.get('目前總市值', 0))
                     if category in asset_allocation:
