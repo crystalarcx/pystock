@@ -753,10 +753,23 @@ def render_cathay_table(cathay_df):
         
         # 設定顏色樣式
         def color_negative_red(val):
-            if isinstance(val, str) and ('$-' in val or val.startswith('-')):
+            if isinstance(val, str) and ('NT$-' in val or val.startswith('-')):
                 return 'color: #e74c3c; font-weight: bold'
-            elif isinstance(val, str) and '
+            elif isinstance(val, str) and ('NT$+' in val or not val.startswith('NT$0') and 'NT$' in val):
+                return 'color: #27ae60; font-weight: bold'
+            return ''
 
+        styled_df = display_df.style.applymap(color_negative_red)
+        st.dataframe(styled_df, use_container_width=True, hide_index=True)
+
+    except Exception as e:
+        st.error(f"國泰證券表格渲染錯誤: {e}")
+        # 顯示原始數據以供除錯
+        with st.expander("原始數據 (除錯用)"):
+            st.dataframe(cathay_df.head(10), use_container_width=True)
+
+    st.markdown('</div>', unsafe_allow_html=True)
+    
 def render_charts(person, holdings_df):
     """渲染圖表"""
     if holdings_df.empty:
