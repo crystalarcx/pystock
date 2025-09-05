@@ -385,19 +385,19 @@ st.markdown("""
 SHEET_CONFIGS = {
     'jason': {
         'id': '17qQIU4KMtbTpo_ozguuzKFHf1HHOhuEBanXxCyE8k4M',
-        'holdings_range': '總覽與損益!A:H',
+        'holdings_range': '總覽與損益!A:I',
         'dca_range': '投資設定!A:E',
         'trend_range': '資產趨勢!A:B'
     },
     'rita': {
         'id': '1ekCpufAJfrzt1cCLsubqLDUMU98_Ol5hTptOV7uXgpw',
-        'holdings_range': '總覽與損益!A:H', 
+        'holdings_range': '總覽與損益!A:I', 
         'dca_range': '投資設定!A:E',
         'trend_range': '資產趨勢!A:B'
     },
     'ed': {
         'id': '1oyG9eKrq57HMBjTWtg4tmKzHQiqc7r-2CWYyhA9ZHNc',
-        'holdings_range': '總覽與損益!A:H', 
+        'holdings_range': '總覽與損益!A:I', 
         'dca_range': '投資設定!A:E',
         'trend_range': '資產趨勢!A:B'
     },
@@ -412,7 +412,7 @@ SHEET_CONFIGS = {
         },
         'fubon_uk': {
             'id': '1WlUslUTcXR-eVK-RdQAHv5Qqyg35xIyHqZgejYYvTIA',
-            'range': '總覽與損益!A:L'
+            'range': '總覽與損益!A:M'
         }
     }
 }
