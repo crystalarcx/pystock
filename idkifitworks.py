@@ -855,7 +855,7 @@ def main():
     person = st.selectbox(
         "選擇投資者",
         ['jason', 'rita', 'ed', 'ed_combined', 'os'],
-        format_func=lambda x: {'jason': 'Jason', 'rita': 'Rita', 'ed': 'Ed (台股)', 'ed_combined': 'Ed (國泰+嘉信)', 'os': '富邦英股'}.get(x, x)
+        format_func=lambda x: {'jason': 'Jason', 'rita': 'Rita', 'ed': 'Ed (台股)', 'ed_combined': 'Ed (國泰+嘉信)', 'os': '總覽'}.get(x, x)
     )
     
     # 刷新按鈕
