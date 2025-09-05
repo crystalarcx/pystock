@@ -1,110 +1,4 @@
-def main():
-    """主要應用程式邏輯"""
-    
-    st.markdown('<div class="hero-section"><h1 class="hero-title">📈 投資儀表板</h1><p class="hero-subtitle">快速掌握個人資產概況與趨勢</p></div>', unsafe_allow_html=True)
-    
-    person = render_user_selection()
-    
-    if st.button('更新數據', key='refresh_button'):
-        st.cache_data.clear()
-        st.rerun()
-
-    if person == 'asset_allocation':
-        st.header("🎯 資產配置總覽")
-        
-        asset_allocation, current_allocation, target_allocation, total_assets = render_asset_allocation_summary()
-        
-        if total_assets > 0:
-            tab1, tab2, tab3 = st.tabs(["📊 配置分析", "📈 趨勢比較", "⚖️ 再平衡建議"])
-            
-            with tab1:
-                st.subheader("資產配置現況分析")
-                render_asset_allocation_charts(asset_allocation, current_allocation, target_allocation, total_assets)
-            
-            with tab2:
-                st.subheader("配置趨勢比較")
-                st.info("功能開發中 - 將顯示資產配置的歷史變化趨勢")
-                
-                # 顯示匯率影響提醒
-                overseas_categories = ['美股個股', '美股ETF', '英股']
-                overseas_total = sum([asset_allocation.get(cat, 0) for cat in overseas_categories])
-                
-                if overseas_total > 0:
-                    st.warning(f"⚠️ 匯率提醒：目前海外資產總值約 {format_currency(overseas_total)} (依匯率 1 USD = {USD_TO_TWD_RATE} TWD 計算)")
-            
-            with tab3:
-                st.subheader("再平衡建議")
-                
-                # 計算需要調整的金額
-                rebalance_suggestions = []
-                for category in set(list(current_allocation.keys()) + list(target_allocation.keys())):
-                    current_pct = current_allocation.get(category, 0)
-                    target_pct = target_allocation.get(category, 0)
-                    
-                    if abs(current_pct - target_pct) > 2:  # 偏差超過2%才建議調整
-                        current_value = asset_allocation.get(category, 0)
-                        target_value = total_assets * target_pct / 100
-                        adjust_amount = target_value - current_value
-                        
-                        rebalance_suggestions.append({
-                            '資產類別': category,
-                            '目前配置%': f"{current_pct:.1f}%",
-                            '目標配置%': f"{target_pct:.1f}%",
-                            '建議調整': "買進" if adjust_amount > 0 else "賣出",
-                            '調整金額': format_currency(abs(adjust_amount)),
-                            '偏差程度': f"{current_pct - target_pct:+.1f}%"
-                        })
-                
-                if rebalance_suggestions:
-                    st.write("#### 建議調整項目：")
-                    rebalance_df = pd.DataFrame(rebalance_suggestions)
-                    st.dataframe(rebalance_df, use_container_width=True)
-                    
-                    st.info("💡 建議：優先調整偏差程度較大的資產類別，可透過定期定額方式逐步調整配置。")
-                else:
-                    st.success("✅ 目前各資產配置均在合理範圍內，無需大幅調整。")
-
-    elif person == 'ed_overseas':
-        st.header("Ed 海外投資總覽")
-        
-        schwab_df = load_sheet_data('ed_overseas', None, 'schwab')
-        cathay_df = load_sheet_data('ed_overseas', None, 'cathay')
-        fubon_df = load_sheet_data('ed_overseas', None, 'fubon_uk')
-
-        schwab_total_usd = get_schwab_total_value(schwab_df)
-        cathay_total_usd = get_cathay_total_value(cathay_df)
-        fubon_total_usd, fubon_total_ntd = get_fubon_uk_total_value(fubon_df)
-        
-        render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_usd, fubon_total_ntd)
-        
-        tab1, tab2, tab3, tab4 = st.tabs(["🇺🇸 嘉信證券", "🇹🇼 國泰證券", "🇬🇧 富邦英股", "📊 綜合分析"])
-        
-        with tab1:
-            st.subheader("嘉信證券 - 美股個股")
-            
-            # --- 新增寫入功能區塊 ---
-            with st.form("schwab_append_form", clear_on_submit=True):
-                st.write("##### ✏️ 新增一筆市值紀錄")
-                c1, c2, c3 = st.columns([1, 1, 2])
-                with c1:
-                    record_date = st.date_input("紀錄日期", value=datetime.now())
-                with c2:
-                    market_value = st.number_input("總市值 (USD)", min_value=0.0, format="%.2f")
-                with c3:
-                    st.write("") # 用於對齊按鈕
-                    st.write("") # 用於對齊按鈕
-                    submitted = st.form_submit_button("新增至 Google Sheet")
-
-            if submitted:
-                # 取得工作表ID和名稱
-                sheet_id = SHEET_CONFIGS['ed_overseas']['schwab']['id']
-                worksheet_name = 'schwab' # append API 只需要工作表名稱
-                
-                # 格式化準備寫入的資料
-                date_str = record_date.strftime('%Y/%m/%d')
-                values_to_append = [[date_str, market_value]]
-                
-                # import streamlit as st
+import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -125,7 +19,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 自定義CSS樣式 - 金融投資主題 (樣式代碼與前一版本相同，此處省略以節省空間)
+# 自定義CSS樣式
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -834,3 +728,343 @@ def get_asset_allocation_data():
                     target_allocation[category] = target_pct
         
         return asset_allocation, current_allocation, target_allocation, total_assets
+    except Exception as e:
+        # 處理任何在函式中發生的其他潛在錯誤
+        st.error(f"獲取資產配置數據失敗: {e}")
+        return {}, {}, {}, 0
+
+def format_currency(value):
+    """格式化為台幣金額"""
+    return f"NT${value:,.0f}"
+
+def render_asset_allocation_summary():
+    """渲染資產配置總覽"""
+    asset_allocation, current_allocation, target_allocation, total_assets = get_asset_allocation_data()
+    
+    st.markdown(f"""
+        <div class="metric-card allocation-card">
+            <div class="metric-label">總資產價值</div>
+            <div class="metric-value">{format_currency(total_assets)}</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    if total_assets > 0:
+        c1, c2 = st.columns(2)
+        with c1:
+            st.write("##### 目前資產配置 (%)")
+            current_df = pd.DataFrame(current_allocation.items(), columns=['資產類別', '配置比例'])
+            current_df['配置比例'] = current_df['配置比例'].round(1).astype(str) + '%'
+            st.dataframe(current_df.set_index('資產類別'), use_container_width=True)
+            
+        with c2:
+            st.write("##### 目標資產配置 (%)")
+            target_df = pd.DataFrame(target_allocation.items(), columns=['資產類別', '目標比例'])
+            target_df['目標比例'] = target_df['目標比例'].astype(str) + '%'
+            st.dataframe(target_df.set_index('資產類別'), use_container_width=True)
+            
+    return asset_allocation, current_allocation, target_allocation, total_assets
+
+def render_asset_allocation_charts(asset_allocation, current_allocation, target_allocation, total_assets):
+    """渲染資產配置圖表"""
+    if total_assets > 0:
+        col1, col2 = st.columns(2)
+        
+        current_data = pd.DataFrame(current_allocation.items(), columns=['資產類別', '配置百分比'])
+        target_data = pd.DataFrame(target_allocation.items(), columns=['資產類別', '配置百分比'])
+
+        with col1:
+            st.write("#### 目前資產配置")
+            fig_current = go.Figure(data=[go.Pie(
+                labels=current_data['資產類別'],
+                values=current_data['配置百分比'],
+                hole=.3,
+                marker=dict(line=dict(color='white', width=2))
+            )])
+            fig_current.update_layout(
+                margin=dict(t=50, b=0, l=0, r=0),
+                legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            )
+            st.plotly_chart(fig_current, use_container_width=True)
+            
+        with col2:
+            st.write("#### 目標資產配置")
+            fig_target = go.Figure(data=[go.Pie(
+                labels=target_data['資產類別'],
+                values=target_data['配置百分比'],
+                hole=.3,
+                marker=dict(line=dict(color='white', width=2))
+            )])
+            fig_target.update_layout(
+                margin=dict(t=50, b=0, l=0, r=0),
+                legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            )
+            st.plotly_chart(fig_target, use_container_width=True)
+
+def render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_usd, fubon_total_ntd):
+    """渲染Ed海外投資總覽"""
+    st.markdown(f"""
+        <div class="metric-card schwab-card">
+            <div class="metric-label">嘉信證券總市值 (USD)</div>
+            <div class="metric-value">${schwab_total_usd:,.2f}</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(f"""
+        <div class="metric-card cathay-card">
+            <div class="metric-label">國泰證券總市值 (USD)</div>
+            <div class="metric-value">${cathay_total_usd:,.2f}</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown(f"""
+        <div class="metric-card fubon-card">
+            <div class="metric-label">富邦英股總市值 (USD)</div>
+            <div class="metric-value">${fubon_total_usd:,.2f}</div>
+            <div class="metric-label">約等於 (NTD)</div>
+            <div class="metric-value">NT${fubon_total_ntd:,.0f}</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    total_overseas_usd = schwab_total_usd + cathay_total_usd + fubon_total_usd
+    total_overseas_twd = total_overseas_usd * USD_TO_TWD_RATE
+    
+    st.markdown(f"""
+        <hr>
+        <div class="metric-card">
+            <div class="metric-label">ED 海外總資產</div>
+            <div class="metric-value">NT${total_overseas_twd:,.0f}</div>
+            <div class="metric-label">約等於</div>
+            <div class="metric-value">${total_overseas_usd:,.2f}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+def render_user_selection():
+    """渲染使用者選擇區塊"""
+    if 'selected_person' not in st.session_state:
+        st.session_state.selected_person = 'asset_allocation'
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        if st.button('🎯 資產配置總覽', key='asset_allocation', use_container_width=True):
+            st.session_state.selected_person = 'asset_allocation'
+            st.rerun()
+    with col2:
+        if st.button('🤵 Jason', key='jason', use_container_width=True):
+            st.session_state.selected_person = 'jason'
+            st.rerun()
+    with col3:
+        if st.button('👩 Rita', key='rita', use_container_width=True):
+            st.session_state.selected_person = 'rita'
+            st.rerun()
+    with col4:
+        if st.button('👨‍💼 Ed', key='ed', use_container_width=True):
+            st.session_state.selected_person = 'ed'
+            st.rerun()
+            
+    return st.session_state.selected_person
+
+def render_personal_dashboard(person):
+    """渲染個人投資儀表板"""
+    
+    holdings_df = load_sheet_data(person, 'holdings')
+    dca_df = load_sheet_data(person, 'dca')
+    trend_df = load_sheet_data(person, 'trend')
+
+    # 顯示總覽指標
+    if not holdings_df.empty and '目前總市值' in holdings_df.columns and '未實現損益' in holdings_df.columns:
+        total_market_value = holdings_df['目前總市值'].sum()
+        total_profit_loss = holdings_df['未實現損益'].sum()
+        
+        profit_loss_class = "profit" if total_profit_loss >= 0 else "loss"
+        profit_loss_sign = "+" if total_profit_loss >= 0 else "-"
+        
+        st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-label">總資產價值</div>
+                <div class="metric-value">{format_currency(total_market_value)}</div>
+                <div class="metric-change {profit_loss_class}">
+                    {profit_loss_sign}{format_currency(abs(total_profit_loss))}
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    # 顯示圖表與數據表格
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.subheader("資產趨勢圖")
+        if not trend_df.empty and '日期' in trend_df.columns and '總市值' in trend_df.columns:
+            trend_df['日期'] = pd.to_datetime(trend_df['日期'], errors='coerce')
+            trend_df.dropna(subset=['日期'], inplace=True)
+            
+            fig = px.line(trend_df, x='日期', y='總市值', title="資產總市值歷史趨勢")
+            fig.update_traces(mode='lines+markers', line=dict(width=2))
+            fig.update_layout(xaxis_title="日期", yaxis_title="總市值 (NT$)", hovermode="x unified")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("資產趨勢數據不完整或格式錯誤，無法繪製圖表。")
+            
+        st.subheader("詳細持股列表")
+        if not holdings_df.empty:
+            st.dataframe(holdings_df, use_container_width=True)
+        else:
+            st.info("沒有找到詳細持股數據。")
+
+    with col2:
+        st.subheader("定期定額計畫")
+        if not dca_df.empty:
+            st.markdown('<div class="dca-card">', unsafe_allow_html=True)
+            for _, row in dca_df.iterrows():
+                st.markdown(f"""
+                    <div class="dca-item">
+                        <strong>{row.get('標的名稱', 'N/A')}</strong>
+                        <br>
+                        每月投入: {format_currency(row.get('每月投入金額', 0))}
+                        <br>
+                        扣款日: {int(row.get('扣款日', 0))}日
+                    </div>
+                """, unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.info("沒有找到定期定額計畫。")
+
+def main():
+    """主要應用程式邏輯"""
+    
+    st.markdown('<div class="hero-section"><h1 class="hero-title">📈 投資儀表板</h1><p class="hero-subtitle">快速掌握個人資產概況與趨勢</p></div>', unsafe_allow_html=True)
+    
+    person = render_user_selection()
+    
+    if st.button('更新數據', key='refresh_button'):
+        st.cache_data.clear()
+        st.rerun()
+
+    if person == 'asset_allocation':
+        st.header("🎯 資產配置總覽")
+        
+        asset_allocation, current_allocation, target_allocation, total_assets = render_asset_allocation_summary()
+        
+        if total_assets > 0:
+            tab1, tab2, tab3 = st.tabs(["📊 配置分析", "📈 趨勢比較", "⚖️ 再平衡建議"])
+            
+            with tab1:
+                st.subheader("資產配置現況分析")
+                render_asset_allocation_charts(asset_allocation, current_allocation, target_allocation, total_assets)
+            
+            with tab2:
+                st.subheader("配置趨勢比較")
+                st.info("功能開發中 - 將顯示資產配置的歷史變化趨勢")
+                
+                # 顯示匯率影響提醒
+                overseas_categories = ['美股個股', '美股ETF', '英股']
+                overseas_total = sum([asset_allocation.get(cat, 0) for cat in overseas_categories])
+                
+                if overseas_total > 0:
+                    st.warning(f"⚠️ 匯率提醒：目前海外資產總值約 {format_currency(overseas_total)} (依匯率 1 USD = {USD_TO_TWD_RATE} TWD 計算)")
+            
+            with tab3:
+                st.subheader("再平衡建議")
+                
+                # 計算需要調整的金額
+                rebalance_suggestions = []
+                for category in set(list(current_allocation.keys()) + list(target_allocation.keys())):
+                    current_pct = current_allocation.get(category, 0)
+                    target_pct = target_allocation.get(category, 0)
+                    
+                    if abs(current_pct - target_pct) > 2:  # 偏差超過2%才建議調整
+                        current_value = asset_allocation.get(category, 0)
+                        target_value = total_assets * target_pct / 100
+                        adjust_amount = target_value - current_value
+                        
+                        rebalance_suggestions.append({
+                            '資產類別': category,
+                            '目前配置%': f"{current_pct:.1f}%",
+                            '目標配置%': f"{target_pct:.1f}%",
+                            '建議調整': "買進" if adjust_amount > 0 else "賣出",
+                            '調整金額': format_currency(abs(adjust_amount)),
+                            '偏差程度': f"{current_pct - target_pct:+.1f}%"
+                        })
+                
+                if rebalance_suggestions:
+                    st.write("#### 建議調整項目：")
+                    rebalance_df = pd.DataFrame(rebalance_suggestions)
+                    st.dataframe(rebalance_df, use_container_width=True)
+                    
+                    st.info("💡 建議：優先調整偏差程度較大的資產類別，可透過定期定額方式逐步調整配置。")
+                else:
+                    st.success("✅ 目前各資產配置均在合理範圍內，無需大幅調整。")
+
+    elif person in ['jason', 'rita', 'ed']:
+        st.header(f"{person.capitalize()} 投資總覽")
+        render_personal_dashboard(person)
+        
+    elif person == 'ed_overseas':
+        st.header("Ed 海外投資總覽")
+        
+        schwab_df = load_sheet_data('ed_overseas', None, 'schwab')
+        cathay_df = load_sheet_data('ed_overseas', None, 'cathay')
+        fubon_df = load_sheet_data('ed_overseas', None, 'fubon_uk')
+
+        schwab_total_usd = get_schwab_total_value(schwab_df)
+        cathay_total_usd = get_cathay_total_value(cathay_df)
+        fubon_total_usd, fubon_total_ntd = get_fubon_uk_total_value(fubon_df)
+        
+        render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_usd, fubon_total_ntd)
+        
+        tab1, tab2, tab3, tab4 = st.tabs(["🇺🇸 嘉信證券", "🇹🇼 國泰證券", "🇬🇧 富邦英股", "📊 綜合分析"])
+        
+        with tab1:
+            st.subheader("嘉信證券 - 美股個股")
+            
+            # --- 新增寫入功能區塊 ---
+            with st.form("schwab_append_form", clear_on_submit=True):
+                st.write("##### ✏️ 新增一筆市值紀錄")
+                c1, c2 = st.columns(2)
+                with c1:
+                    record_date = st.date_input("紀錄日期", value=datetime.now())
+                with c2:
+                    market_value = st.number_input("總市值 (USD)", min_value=0.0, format="%.2f")
+                
+                submitted = st.form_submit_button("新增至 Google Sheet")
+
+            if submitted:
+                if market_value > 0:
+                    try:
+                        # 取得工作表ID和名稱
+                        sheet_id = SHEET_CONFIGS['ed_overseas']['schwab']['id']
+                        worksheet_name = 'schwab!A:B' # append API 的 range 需要包含列
+                        
+                        # 格式化準備寫入的資料
+                        date_str = record_date.strftime('%Y/%m/%d')
+                        values_to_append = [[date_str, market_value]]
+                        
+                        if append_to_sheet(sheet_id, worksheet_name, values_to_append):
+                            st.success("數據成功寫入 Google Sheet！")
+                            st.cache_data.clear()
+                            time.sleep(1) # 暫停1秒，確保使用者看到成功訊息
+                            st.rerun() # 重新執行應用程式以更新數據
+                        else:
+                            st.error("寫入數據失敗，請檢查權限或連線。")
+                    except Exception as e:
+                        st.error(f"寫入過程發生錯誤: {e}")
+                else:
+                    st.warning("請輸入有效的總市值。")
+
+            st.dataframe(schwab_df, use_container_width=True)
+            
+        with tab2:
+            st.subheader("國泰證券 - 美股ETF")
+            st.dataframe(cathay_df, use_container_width=True)
+        
+        with tab3:
+            st.subheader("富邦英股")
+            st.dataframe(fubon_df, use_container_width=True)
+            
+        with tab4:
+            st.subheader("綜合趨勢分析")
+            st.info("功能開發中 - 將顯示各海外帳戶的歷史趨勢比較。")
+            
+
+if __name__ == '__main__':
+    main()
