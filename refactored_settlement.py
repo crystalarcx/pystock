@@ -35,19 +35,19 @@ class Config:
     SHEET_CONFIGS = {
         'jason': {
             'id': '17qQIU4KMtbTpo_ozguuzKFHf1HHOhuEBanXxCyE8k4M',
-            'holdings_range': '總覽與獲益!A:I',
+            'holdings_range': '總覽與損益!A:I',
             'dca_range': '投資設定!A:E',
             'trend_range': '資產趨勢!A:B'
         },
         'rita': {
             'id': '1ekCpufAJfrzt1cCLsubqLDUMU98_Ol5hTptOV7uXgpw',
-            'holdings_range': '總覽與獲益!A:I', 
+            'holdings_range': '總覽與損益!A:I', 
             'dca_range': '投資設定!A:E',
             'trend_range': '資產趨勢!A:B'
         },
         'ed': {
             'id': '1oyG9eKrq57HMBjTWtg4tmKzHQiqc7r-2CWYyhA9ZHNc',
-            'holdings_range': '總覽與獲益!A:I', 
+            'holdings_range': '總覽與損益!A:I', 
             'dca_range': '投資設定!A:E',
             'trend_range': '資產趨勢!A:B'
         },
@@ -58,11 +58,11 @@ class Config:
             },
             'cathay': {
                 'id': '103Q3rZqZihu70jL3fHbVtU0hbFmzXb4n2708awhKiG0',
-                'range': '總覽與獲益!A:Z'
+                'range': '總覽與損益!A:Z'
             },
             'fubon_uk': {
                 'id': '1WlUslUTcXR-eVK-RdQAHv5Qqyg35xIyHqZgejYYvTIA',
-                'range': '總覽與獲益!A:M'
+                'range': '總覽與損益!A:M'
             }
         }
     }
@@ -223,7 +223,7 @@ class DataService:
         elif data_type == 'holdings':
             return [
                 '總投入成本', '總持有股數', '目前股價', 
-                '目前總市值', '未實現獲益', '報酬率'
+                '目前總市值', '未實現損益', '報酬率'
             ]
         elif data_type == 'dca':
             return ['每月投入金額', '扣款日', '券商折扣']
@@ -266,7 +266,7 @@ class CalculationService:
         try:
             total_cost = holdings_df['總投入成本'].sum()
             total_value = holdings_df['目前總市值'].sum()
-            total_pl = holdings_df['未實現獲益'].sum()
+            total_pl = holdings_df['未實現損益'].sum()
             total_return = (total_pl / total_cost) * 100 if total_cost > 0 else 0
             
             return {
@@ -300,7 +300,7 @@ class CalculationService:
             return 0.0
     
     def get_cathay_total_value(self, cathay_df):
-        """從總覽與獲益工作表的F欄計算總市值"""
+        """從總覽與損益工作表的F欄計算總市值"""
         try:
             if cathay_df.empty or len(cathay_df.columns) < 6:
                 return 0.0
@@ -741,7 +741,7 @@ class UIComponents:
             profit_class = 'profit' if summary_data['total_pl'] >= 0 else 'loss'
             st.markdown(
                 f'<div class="metric-card">'
-                f'<div class="metric-label">未實現獲益</div>'
+                f'<div class="metric-label">未實現損益</div>'
                 f'<div class="metric-value {profit_class}">{Utils.format_currency(summary_data["total_pl"])}</div>'
                 f'<div class="metric-change {profit_class}">{Utils.format_percentage(summary_data["total_return"])}</div>'
                 f'</div>', 
@@ -858,7 +858,7 @@ class TableRenderer:
                     '總持有股數': "{:,.0f}",
                     '總投入成本': "NT${:,.0f}",
                     '目前總市值': "NT${:,.0f}",
-                    '未實現獲益': "NT${:,.0f}",
+                    '未實現損益': "NT${:,.0f}",
                     '報酬率': "{:,.2f}%"
                 }),
                 use_container_width=True
@@ -874,19 +874,19 @@ class TableRenderer:
             display_df = df.rename(columns={
                 '目前美價': '美價(USD)', '總持有股數': '股數',
                 '總投入成本(USD)': '成本(USD)', '目前總市值(USD)': '市值(USD)',
-                '未實現獲益(USD)': '獲益(USD)', '未實現報酬率': '報酬率%',
-                '總未實現獲益%': '總報酬率%'
+                '未實現損益(USD)': '損益(USD)', '未實現報酬率': '報酬率%',
+                '總未實現損益%': '總報酬率%'
             })
             display_columns = [
                 '股票代號', '股票名稱', '美價(USD)', '股數', 
-                '成本(USD)', '市值(USD)', '獲益(USD)', '報酬率%'
+                '成本(USD)', '市值(USD)', '損益(USD)', '報酬率%'
             ]
             display_columns = [col for col in display_columns if col in display_df.columns]
             st.dataframe(
                 display_df[display_columns].style.format({
                     '美價(USD)': "{:.2f}", '股數': "{:,.0f}",
                     '成本(USD)': "${:,.0f}", '市值(USD)': "${:,.0f}",
-                    '獲益(USD)': "${:,.0f}", '報酬率%': "{:,.2f}%"
+                    '損益(USD)': "${:,.0f}", '報酬率%': "{:,.2f}%"
                 }),
                 use_container_width=True
             )
