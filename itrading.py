@@ -1280,6 +1280,19 @@ def render_trend_chart(trend_df):
         
         trend_df = trend_df.copy()
         
+        # 安全轉換日期
+        try:
+            trend_df['日期'] = pd.to_datetime(trend_df['日期'], errors='coerce')
+            # 移除無法轉換的日期
+            trend_df = trend_df.dropna(subset=['日期'])
+        except Exception as e:
+            st.error(f"日期轉換失敗: {str(e)}")
+            return
+        
+        if trend_df.empty:
+            st.warning("日期轉換後數據為空")
+            return
+        
         # 安全轉換市值
         trend_df['總市值'] = trend_df['總市值'].apply(parse_number)
         trend_df = trend_df[trend_df['總市值'] > 0]  # 移除無效市值
@@ -1474,18 +1487,4 @@ def main():
             st.warning(f"無法載入 {person} 的投資數據，或數據為空。")
 
 if __name__ == "__main__":
-    main()換日期
-        try:
-            trend_df['日期'] = pd.to_datetime(trend_df['日期'], errors='coerce')
-            # 移除無法轉換的日期
-            trend_df = trend_df.dropna(subset=['日期'])
-        except Exception as e:
-            st.error(f"日期轉換失敗: {str(e)}")
-            return
-        
-        if trend_df.empty:
-            st.warning("日期轉換後數據為空")
-            return
-        
-        # 安全轉
-        
+    main()
