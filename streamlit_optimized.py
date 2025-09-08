@@ -799,15 +799,29 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
         st.plotly_chart(fig_actual_pie, use_container_width=True)
 
 def render_holdings_table(holdings_df, person):
-    """渲染持股表格 - 簡化版本"""
+    """渲染持股表格 - 添加數字格式化"""
     if holdings_df.empty:
         st.info("查無持股數據。")
         return
     
     if person != 'ed_overseas':
-        # 簡化格式設置，提升渲染速度
-        display_df = holdings_df.copy()
-        st.dataframe(display_df, use_container_width=True)
+        # 格式化數字欄位，添加千位分隔符
+        format_dict = {}
+        for col in holdings_df.columns:
+            if col in ['目前股價']:
+                format_dict[col] = "{:.2f}"
+            elif col in ['總持有股數']:
+                format_dict[col] = "{:,.0f}"
+            elif col in ['總投入成本', '目前總市值', '未實現損益']:
+                format_dict[col] = "NT${:,.0f}"
+            elif col in ['報酬率']:
+                format_dict[col] = "{:,.2f}%"
+        
+        if format_dict:
+            styled_df = holdings_df.style.format(format_dict)
+            st.dataframe(styled_df, use_container_width=True)
+        else:
+            st.dataframe(holdings_df, use_container_width=True)
 
 def render_overseas_holdings_table(df, broker_name):
     """渲染海外持股表格 - 優化版本"""
