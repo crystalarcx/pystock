@@ -1225,4 +1225,74 @@ def main():
         if total_value > 0:
             categories, target_percentages, actual_percentages, differences = render_asset_allocation_summary(
                 allocation_data, total_value, usd_twd_rate
+            )
+            render_allocation_charts(categories, target_percentages, actual_percentages, differences)
+        else:
+            st.warning("沒有找到足夠的資產數據來進行配置分析。")
             
+    elif person == 'ed_overseas':
+        st.header("🌍 Ed 海外投資總覽")
+        with st.spinner('正在載入海外投資數據...'):
+            data = load_person_all_data(person)
+            schwab_df = data.get('schwab', pd.DataFrame())
+            cathay_df = data.get('cathay', pd.DataFrame())
+            fubon_df = data.get('fubon_uk', pd.DataFrame())
+            
+        schwab_total_usd = get_schwab_total_value(schwab_df)
+        cathay_total_usd = get_cathay_total_value(cathay_df)
+        fubon_total_usd, fubon_total_ntd = get_fubon_uk_total_value(fubon_df)
+        
+        render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_usd, fubon_total_ntd)
+        
+        st.markdown('---')
+        
+        tab1, tab2, tab3 = st.tabs(["🇺🇸 嘉信證券", "🇹🇼 國泰證券", "🇬🇧 富邦英股"])
+        
+        with tab1:
+            st.header("嘉信證券 Schwab")
+            render_overseas_portfolio_chart(schwab_df, "嘉信證券")
+            st.markdown("### 📋 嘉信證券持股")
+            render_overseas_holdings_table(schwab_df, "嘉信證券")
+            
+        with tab2:
+            st.header("國泰證券 Cathay")
+            render_overseas_portfolio_chart(cathay_df, "國泰證券")
+            st.markdown("### 📋 國泰證券持股")
+            render_overseas_holdings_table(cathay_df, "國泰證券")
+        
+        with tab3:
+            st.header("富邦英股 Fubon UK")
+            render_overseas_portfolio_chart(fubon_df, "富邦英股")
+            st.markdown("### 📋 富邦英股持股")
+            render_overseas_holdings_table(fubon_df, "富邦英股")
+
+    else:
+        st.header(f"💼 {person.capitalize()} 的台股總覽")
+        
+        with st.spinner('正在載入數據...'):
+            data = load_person_all_data(person)
+            holdings_df = data.get('holdings', pd.DataFrame())
+            dca_df = data.get('dca', pd.DataFrame())
+            trend_df = data.get('trend', pd.DataFrame())
+        
+        render_summary_cards(person, holdings_df, dca_df)
+        
+        st.markdown('---')
+        
+        tab1, tab2 = st.tabs(["📈 資產趨勢", "📋 持股清單"])
+        
+        with tab1:
+            st.header("資產趨勢與配置")
+            st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+            render_trend_chart(trend_df)
+            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown('<div class="chart-container">', unsafe_allow_html=True)
+            render_portfolio_chart(holdings_df, person)
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        with tab2:
+            st.header("持股清單")
+            render_holdings_table(holdings_df, person)
+
+if __name__ == '__main__':
+    main()
