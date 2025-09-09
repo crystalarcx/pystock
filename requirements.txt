@@ -8,3 +8,4 @@ google-api-python-client>=2.70.0
 numpy>=1.24.0
 yfinance
 twstock
+lxml
