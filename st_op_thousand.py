@@ -980,14 +980,14 @@ def main():
             render_allocation_charts(categories, target_percentages, actual_percentages, differences)
             
             # 建議調整
-            st.markdown("### 💡 配置建議")
+            st.markdown("### 配置建議")
             suggestions = []
             for i, (cat, diff) in enumerate(zip(categories, differences)):
                 if abs(diff) > 2:
                     if diff > 0:
-                        suggestions.append(f"• **{cat}** 目前超配 {diff:.1f}%，建議減少投入")
+                        suggestions.append(f"• **{cat}** 目前超過配置建議 {diff:.1f}%，建議減少投入")
                     else:
-                        suggestions.append(f"• **{cat}** 目前低配 {abs(diff):.1f}%，建議增加投入")
+                        suggestions.append(f"• **{cat}** 目前低於配置建議 {abs(diff):.1f}%，建議增加投入")
             
             if suggestions:
                 for suggestion in suggestions:
