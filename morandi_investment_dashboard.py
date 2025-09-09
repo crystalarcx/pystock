@@ -20,185 +20,127 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 莫蘭迪配色CSS樣式
+# 冷色調莫蘭迪色系CSS樣式
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    :root {
-        --morandi-sage: #9DB2A6;
-        --morandi-dusty-rose: #D4A5A5;
-        --morandi-warm-grey: #C7B8A1;
-        --morandi-soft-blue: #A5C4D4;
-        --morandi-muted-lavender: #B8A5C7;
-        --morandi-cream: #F5F3F0;
-        --morandi-taupe: #B5A08A;
-        --morandi-stone: #9B8E82;
-        --morandi-pale-mint: #B8D4C7;
-        --morandi-soft-coral: #D4B5A5;
-        --morandi-light-grey: #E8E6E1;
-        --morandi-dark-grey: #6B645C;
-    }
-    
-    * { 
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        font-weight: 400;
-    }
-    
-    .main > div { 
-        padding-top: 1rem; 
-        background: linear-gradient(135deg, var(--morandi-cream) 0%, var(--morandi-light-grey) 100%);
-        min-height: 100vh;
-    }
-    
+    * { font-family: 'Inter', sans-serif; }
+    .main > div { padding-top: 1rem; }
     .css-1d391kg { display: none; }
     
-    /* 主標題區域 - 莫蘭迪風格 */
-    .hero-section {
-        background: linear-gradient(135deg, var(--morandi-sage) 0%, var(--morandi-soft-blue) 50%, var(--morandi-muted-lavender) 100%);
-        color: white;
-        padding: 3rem 2rem;
-        border-radius: 20px;
-        margin-bottom: 2.5rem;
-        text-align: center;
-        box-shadow: 0 15px 40px rgba(157, 178, 166, 0.25);
-        position: relative;
-        overflow: hidden;
+    /* 冷色調莫蘭迪主題配色 */
+    :root {
+        --morandi-sage: #8B9B8E;        /* 灰綠色 */
+        --morandi-blue-grey: #7D8C9F;   /* 藍灰色 */
+        --morandi-lavender: #9B9FB2;    /* 薰衣草色 */
+        --morandi-slate: #7A8B8B;       /* 青石色 */
+        --morandi-pearl: #B8C0C8;       /* 珍珠色 */
+        --morandi-mist: #A8B3B8;        /* 霧色 */
+        --morandi-light: #E8EBF0;       /* 淺色背景 */
+        --morandi-dark: #5A6B73;        /* 深色文字 */
     }
     
-    .hero-section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
-        pointer-events: none;
+    /* 主標題區域 */
+    .hero-section {
+        background: linear-gradient(135deg, var(--morandi-blue-grey), var(--morandi-slate));
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(125, 140, 159, 0.15);
     }
     
     .hero-title {
-        font-size: 3rem;
-        font-weight: 300;
+        font-size: 2.5rem;
+        font-weight: 700;
         margin: 0;
-        letter-spacing: -0.02em;
-        text-shadow: 0 2px 20px rgba(0,0,0,0.1);
-        position: relative;
-        z-index: 1;
     }
     
     .hero-subtitle {
-        font-size: 1.2rem;
-        margin: 1.5rem 0 0 0;
+        font-size: 1.1rem;
+        margin: 1rem 0 0 0;
         opacity: 0.9;
-        font-weight: 300;
-        position: relative;
-        z-index: 1;
     }
     
-    /* 用戶選擇按鈕 - 莫蘭迪風格 */
+    /* 用戶選擇按鈕 */
     .user-selection-container {
         display: flex;
         flex-wrap: wrap;
-        gap: 16px;
+        gap: 12px;
         justify-content: center;
-        margin: 2rem 0;
-        padding: 2rem;
-        background: rgba(245, 243, 240, 0.8);
-        border-radius: 20px;
-        backdrop-filter: blur(10px);
+        margin: 1.5rem 0;
+        padding: 1.5rem;
+        background: rgba(232, 235, 240, 0.3);
+        border-radius: 16px;
     }
     
     .user-btn {
-        background: linear-gradient(135deg, var(--morandi-cream), rgba(245, 243, 240, 0.9));
-        color: var(--morandi-dark-grey);
-        border: 2px solid var(--morandi-warm-grey);
-        border-radius: 16px;
-        padding: 20px 28px;
+        background: linear-gradient(135deg, var(--morandi-light), #f5f7fa);
+        color: var(--morandi-dark);
+        border: 2px solid rgba(125, 140, 159, 0.3);
+        border-radius: 12px;
+        padding: 16px 24px;
         font-size: 1rem;
-        font-weight: 500;
+        font-weight: 600;
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.3s ease;
         text-decoration: none;
         display: flex;
         flex-direction: column;
         align-items: center;
-        min-width: 140px;
-        box-shadow: 0 6px 20px rgba(157, 178, 166, 0.15);
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .user-btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-        transition: left 0.6s;
+        min-width: 130px;
+        box-shadow: 0 4px 12px rgba(125, 140, 159, 0.08);
     }
     
     .user-btn:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 30px rgba(157, 178, 166, 0.25);
-        border-color: var(--morandi-sage);
-    }
-    
-    .user-btn:hover::before {
-        left: 100%;
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(125, 140, 159, 0.2);
+        border-color: var(--morandi-blue-grey);
+        background: linear-gradient(135deg, var(--morandi-pearl), var(--morandi-light));
     }
     
     .user-btn.active {
-        background: linear-gradient(135deg, var(--morandi-sage), var(--morandi-soft-blue));
+        background: linear-gradient(135deg, var(--morandi-blue-grey), var(--morandi-slate));
         color: white;
-        border-color: var(--morandi-sage);
-        box-shadow: 0 8px 25px rgba(157, 178, 166, 0.3);
+        border-color: var(--morandi-blue-grey);
     }
     
-    /* 標籤頁 - 莫蘭迪風格 */
+    /* 標籤頁 */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: var(--morandi-light-grey);
-        padding: 8px;
-        border-radius: 16px;
-        box-shadow: inset 0 2px 8px rgba(107, 100, 92, 0.1);
+        gap: 6px;
+        background: rgba(184, 192, 200, 0.15);
+        padding: 6px;
+        border-radius: 10px;
     }
     
     .stTabs [data-baseweb="tab"] {
         background: transparent;
-        border-radius: 12px;
-        padding: 16px 28px;
-        color: var(--morandi-dark-grey);
-        font-weight: 500;
-        transition: all 0.3s ease;
+        border-radius: 6px;
+        padding: 12px 24px;
+        color: var(--morandi-dark);
+        font-weight: 600;
+        transition: all 0.2s ease;
         border: none;
-        position: relative;
-    }
-    
-    .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(157, 178, 166, 0.1);
     }
     
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, var(--morandi-sage), var(--morandi-soft-blue)) !important;
+        background: linear-gradient(135deg, var(--morandi-blue-grey), var(--morandi-slate)) !important;
         color: white !important;
-        box-shadow: 0 4px 15px rgba(157, 178, 166, 0.3);
     }
     
-    /* 指標卡片 - 莫蘭迪風格 */
+    /* 指標卡片 */
     .metric-card {
-        background: linear-gradient(135deg, var(--morandi-cream), rgba(245, 243, 240, 0.9));
-        border: 1px solid var(--morandi-warm-grey);
-        padding: 2rem 1.5rem;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(157, 178, 166, 0.15);
+        background: linear-gradient(135deg, var(--morandi-light), #f8fafb);
+        border: 1px solid rgba(125, 140, 159, 0.1);
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(125, 140, 159, 0.08);
         text-align: center;
-        margin-bottom: 1.5rem;
-        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+        transition: transform 0.2s ease;
         position: relative;
-        overflow: hidden;
     }
     
     .metric-card::before {
@@ -207,221 +149,103 @@ st.markdown("""
         top: 0;
         left: 0;
         right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, var(--morandi-sage), var(--morandi-dusty-rose), var(--morandi-soft-blue), var(--morandi-muted-lavender));
-        border-radius: 20px 20px 0 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--morandi-sage), var(--morandi-blue-grey), var(--morandi-lavender), var(--morandi-mist));
+        border-radius: 12px 12px 0 0;
     }
     
     .metric-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 15px 35px rgba(157, 178, 166, 0.25);
+        transform: translateY(-2px);
     }
     
     .metric-value {
-        font-size: 2.4rem;
-        font-weight: 600;
-        margin: 1rem 0;
-        color: var(--morandi-dark-grey);
-        letter-spacing: -0.01em;
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 0.8rem 0;
+        color: var(--morandi-dark);
     }
     
     .metric-label {
         font-size: 0.9rem;
-        color: var(--morandi-stone);
+        color: var(--morandi-mist);
         font-weight: 500;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
     }
     
     .metric-change {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         font-weight: 600;
-        padding: 6px 14px;
-        border-radius: 20px;
+        padding: 3px 10px;
+        border-radius: 16px;
         display: inline-block;
     }
     
     .profit { 
         color: var(--morandi-sage); 
-        background: rgba(157, 178, 166, 0.15); 
+        background: rgba(139, 155, 142, 0.15); 
     }
-    
     .loss { 
-        color: var(--morandi-dusty-rose); 
-        background: rgba(212, 165, 165, 0.15); 
+        color: #A08B8B; 
+        background: rgba(160, 139, 139, 0.15); 
     }
     
-    /* 專用卡片 - 莫蘭迪風格 */
-    .dca-card {
-        background: linear-gradient(135deg, var(--morandi-warm-grey), var(--morandi-taupe));
+    /* 專用卡片 */
+    .dca-card, .schwab-card, .cathay-card, .fubon-card, .allocation-card {
         color: white;
-        padding: 2rem 1.5rem;
-        border-radius: 20px;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 10px 30px rgba(199, 184, 161, 0.25);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
     }
     
-    .schwab-card {
-        background: linear-gradient(135deg, var(--morandi-soft-blue), var(--morandi-muted-lavender));
-        color: white;
-        padding: 2rem 1.5rem;
-        border-radius: 20px;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 10px 30px rgba(165, 196, 212, 0.25);
-    }
-    
-    .cathay-card {
-        background: linear-gradient(135deg, var(--morandi-dusty-rose), var(--morandi-soft-coral));
-        color: white;
-        padding: 2rem 1.5rem;
-        border-radius: 20px;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 10px 30px rgba(212, 165, 165, 0.25);
-    }
-    
-    .fubon-card {
-        background: linear-gradient(135deg, var(--morandi-stone), var(--morandi-dark-grey));
-        color: white;
-        padding: 2rem 1.5rem;
-        border-radius: 20px;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 10px 30px rgba(155, 142, 130, 0.25);
-    }
-    
-    .allocation-card {
-        background: linear-gradient(135deg, var(--morandi-muted-lavender), var(--morandi-pale-mint));
-        color: white;
-        padding: 2rem 1.5rem;
-        border-radius: 20px;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 10px 30px rgba(184, 165, 199, 0.25);
-    }
+    .dca-card { background: linear-gradient(135deg, var(--morandi-mist), var(--morandi-pearl)); }
+    .schwab-card { background: linear-gradient(135deg, var(--morandi-blue-grey), var(--morandi-slate)); }
+    .cathay-card { background: linear-gradient(135deg, var(--morandi-lavender), var(--morandi-blue-grey)); }
+    .fubon-card { background: linear-gradient(135deg, var(--morandi-sage), var(--morandi-mist)); }
+    .allocation-card { background: linear-gradient(135deg, var(--morandi-slate), var(--morandi-blue-grey)); }
     
     .dca-item {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-        backdrop-filter: blur(5px);
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
     }
     
-    /* 圖表容器 - 莫蘭迪風格 */
+    /* 圖表容器 */
     .chart-container {
-        background: var(--morandi-cream);
-        border: 1px solid var(--morandi-light-grey);
-        border-radius: 20px;
-        padding: 1.5rem;
-        box-shadow: 0 10px 30px rgba(157, 178, 166, 0.15);
-        margin-bottom: 2rem;
+        background: white;
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 6px 20px rgba(125, 140, 159, 0.06);
+        margin-bottom: 1.5rem;
+        border: 1px solid rgba(125, 140, 159, 0.08);
     }
     
-    /* 按鈕樣式 - 莫蘭迪風格 */
+    /* 按鈕樣式 - 統一設計 */
     .stButton > button {
-        background: linear-gradient(135deg, var(--morandi-sage), var(--morandi-soft-blue));
+        background: linear-gradient(135deg, var(--morandi-blue-grey), var(--morandi-slate));
         color: white;
         border: none;
-        border-radius: 12px;
-        padding: 0.6rem 1.8rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        box-shadow: 0 6px 20px rgba(157, 178, 166, 0.2);
+        border-radius: 8px;
+        padding: 0.4rem 1.2rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(125, 140, 159, 0.15);
     }
     
     .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(157, 178, 166, 0.3);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(125, 140, 159, 0.25);
+        background: linear-gradient(135deg, var(--morandi-slate), var(--morandi-blue-grey));
     }
     
-    /* 表單樣式 - 莫蘭迪風格 */
-    .stSelectbox > div > div,
-    .stNumberInput > div > div > input,
-    .stDateInput > div > div > input {
-        border: 1px solid var(--morandi-warm-grey) !important;
-        border-radius: 12px !important;
-        background: var(--morandi-cream) !important;
-        color: var(--morandi-dark-grey) !important;
-    }
-    
-    /* 數據表格樣式 */
-    .dataframe {
-        border: none !important;
-        border-radius: 16px !important;
-        overflow: hidden !important;
-        box-shadow: 0 8px 25px rgba(157, 178, 166, 0.15) !important;
-    }
-    
-    .dataframe th {
-        background: var(--morandi-sage) !important;
-        color: white !important;
-        font-weight: 500 !important;
-        padding: 12px !important;
-    }
-    
-    .dataframe td {
-        background: var(--morandi-cream) !important;
-        color: var(--morandi-dark-grey) !important;
-        padding: 10px 12px !important;
-        border-bottom: 1px solid var(--morandi-light-grey) !important;
-    }
-    
-    /* 響應式設計 */
+    /* 響應式 */
     @media (max-width: 768px) {
-        .hero-title { 
-            font-size: 2.2rem; 
-        }
-        .hero-section { 
-            padding: 2rem 1.5rem; 
-        }
-        .metric-card { 
-            padding: 1.5rem 1.2rem; 
-        }
-        .user-btn { 
-            min-width: 160px; 
-            padding: 16px 20px;
-        }
-        .user-selection-container {
-            padding: 1.5rem;
-        }
-    }
-    
-    /* 滾動條美化 */
-    ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-        background: var(--morandi-light-grey);
-        border-radius: 10px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-        background: var(--morandi-sage);
-        border-radius: 10px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--morandi-soft-blue);
-    }
-    
-    /* 警告和成功訊息樣式 */
-    .stAlert {
-        border-radius: 16px !important;
-        border: none !important;
-        box-shadow: 0 6px 20px rgba(157, 178, 166, 0.15) !important;
-    }
-    
-    .stAlert[data-baseweb="notification"] {
-        background: var(--morandi-cream) !important;
-        color: var(--morandi-dark-grey) !important;
-    }
-    
-    /* 輸入框聚焦效果 */
-    .stSelectbox > div > div:focus-within,
-    .stNumberInput > div > div:focus-within,
-    .stDateInput > div > div:focus-within {
-        box-shadow: 0 0 0 2px rgba(157, 178, 166, 0.3) !important;
+        .hero-title { font-size: 1.8rem; }
+        .hero-section { padding: 1.5rem 1rem; }
+        .metric-card { padding: 1.2rem; }
+        .user-btn { min-width: 180px; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -794,7 +618,7 @@ def render_user_selection():
         {'key': 'jason', 'icon': '👨‍💼', 'label': 'Jason', 'desc': '台股投資'},
         {'key': 'rita', 'icon': '👩‍💼', 'label': 'Rita', 'desc': '台股投資'},
         {'key': 'ed', 'icon': '👨‍💻', 'label': 'Ed', 'desc': '台股投資'},
-        {'key': 'ed_overseas', 'icon': '🌍', 'label': 'Ed', 'desc': '海外總覽'},
+        {'key': 'ed_overseas', 'icon': '🌏', 'label': 'Ed', 'desc': '海外總覽'},
         {'key': 'asset_allocation', 'icon': '📊', 'label': '資產配置', 'desc': '整體配置'}
     ]
     
@@ -873,7 +697,7 @@ def render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_u
         st.markdown(f'<div class="fubon-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; opacity: 0.9;">🇬🇧 富邦英股</div><div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem;">{format_currency(fubon_total_usd, "USD")}</div><div style="opacity: 0.8;">英股總市值</div></div>', unsafe_allow_html=True)
     
     with col4:
-        st.markdown(f'<div class="metric-card" style="border: none; background: linear-gradient(135deg, var(--morandi-pale-mint), rgba(184, 212, 199, 0.9));"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--morandi-dark-grey); opacity: 0.9;">總資產 (USD)</div><div style="font-size: 2.2rem; font-weight: 700; color: var(--morandi-dark-grey); margin-bottom: 0.5rem;">{format_currency(total_combined_usd, "USD")}</div><div style="opacity: 0.8;">三平台合計</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card" style="border: none; background: linear-gradient(135deg, #E8EBF0, #f5f7fa);"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #7D8C9F; opacity: 0.9;">總資產 (USD)</div><div style="font-size: 2.2rem; font-weight: 700; color: #5A6B73; margin-bottom: 0.5rem;">{format_currency(total_combined_usd, "USD")}</div><div style="opacity: 0.8;">三平台合計</div></div>', unsafe_allow_html=True)
 
 def render_asset_allocation_summary(allocation_data, total_value, usd_twd_rate):
     """渲染資產配置摘要"""
@@ -904,8 +728,8 @@ def render_asset_allocation_summary(allocation_data, total_value, usd_twd_rate):
         comparison_df.style.format({
             '目標配置(%)': "{:.0f}%"
         }).applymap(
-            lambda x: 'color: green' if isinstance(x, str) and x.startswith('+') 
-            else ('color: red' if isinstance(x, str) and x.startswith('-') else ''),
+            lambda x: 'color: #8B9B8E' if isinstance(x, str) and x.startswith('+') 
+            else ('color: #A08B8B' if isinstance(x, str) and x.startswith('-') else ''),
             subset=['差距(%)']
         ),
         use_container_width=True
@@ -913,9 +737,13 @@ def render_asset_allocation_summary(allocation_data, total_value, usd_twd_rate):
     
     return categories, target_percentages, actual_percentages, differences
 
-# 優化8: 延緩載入圖表組件
+# 優化8: 延遲載入圖表組件
 def render_allocation_charts(categories, target_percentages, actual_percentages, differences):
-    """渲染資產配置圖表 - 優化版"""
+    """渲染資產配置圖表 - 使用冷色調莫蘭迪配色"""
+    
+    # 定義冷色調莫蘭迪色彩調色板
+    morandi_colors = ['#8B9B8E', '#7D8C9F', '#9B9FB2', '#7A8B8B', '#B8C0C8']
+    morandi_cool_palette = ['#7D8C9F', '#8B9B8E', '#9B9FB2', '#A8B3B8', '#7A8B8B']
     
     col1, col2 = st.columns(2)
     
@@ -929,14 +757,14 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
                 name='目標配置',
                 x=categories,
                 y=target_percentages,
-                marker_color='#9DB2A6'
+                marker_color='rgba(125, 140, 159, 0.8)'
             ))
             
             fig_comparison.add_trace(go.Bar(
                 name='實際配置',
                 x=categories,
                 y=actual_percentages,
-                marker_color='#D4A5A5'
+                marker_color='rgba(139, 155, 142, 0.8)'
             ))
             
             fig_comparison.update_layout(
@@ -945,7 +773,9 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
                 yaxis_title='配置比例(%)',
                 barmode='group',
                 template="plotly_white",
-                height=400  # 固定高度以提升渲染速度
+                height=400,  # 固定高度以提升渲染速度
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
             )
             
             st.plotly_chart(fig_comparison, use_container_width=True)
@@ -953,7 +783,7 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
     with col2:
         chart_container2 = st.empty()
         with chart_container2.container():
-            colors = ['var(--morandi-sage)' if x >= 0 else 'var(--morandi-dusty-rose)' for x in differences]
+            colors = ['#8B9B8E' if x >= 0 else '#A08B8B' for x in differences]
             
             fig_diff = go.Figure(data=[
                 go.Bar(
@@ -971,12 +801,14 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
                 yaxis_title='差距(%)',
                 template="plotly_white",
                 height=400,
-                yaxis=dict(zeroline=True, zerolinewidth=2, zerolinecolor='black')
+                yaxis=dict(zeroline=True, zerolinewidth=2, zerolinecolor='#7A8B8B'),
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
             )
             
             st.plotly_chart(fig_diff, use_container_width=True)
     
-    # 餅狀圖比較 - 簡化版本
+    # 餅圖比較 - 使用莫蘭迪配色
     col3, col4 = st.columns(2)
     
     with col3:
@@ -984,9 +816,13 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
             values=target_percentages,
             names=categories,
             title='目標資產配置',
-            color_discrete_sequence=['#9DB2A6', '#A5C4D4', '#B8A5C7', '#D4A5A5', '#C7B8A1']
+            color_discrete_sequence=morandi_colors
         )
-        fig_target_pie.update_layout(height=350)
+        fig_target_pie.update_layout(
+            height=350,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
         st.plotly_chart(fig_target_pie, use_container_width=True)
     
     with col4:
@@ -994,9 +830,13 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
             values=actual_percentages,
             names=categories,
             title='實際資產配置',
-            color_discrete_sequence=['#B8D4C7', '#D4B5A5', '#B5A08A', '#9B8E82', '#E8E6E1']
+            color_discrete_sequence=morandi_cool_palette
         )
-        fig_actual_pie.update_layout(height=350)
+        fig_actual_pie.update_layout(
+            height=350,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
         st.plotly_chart(fig_actual_pie, use_container_width=True)
 
 def render_holdings_table(holdings_df, person):
@@ -1039,7 +879,7 @@ def render_overseas_holdings_table(df, broker_name):
         st.dataframe(df, use_container_width=True)
     
 def render_portfolio_chart(holdings_df, person):
-    """渲染投資組合圖表 - 優化版本"""
+    """渲染投資組合圖表 - 使用冷色調莫蘭迪配色"""
     if holdings_df.empty or person == 'ed_overseas': 
         return
         
@@ -1056,16 +896,20 @@ def render_portfolio_chart(holdings_df, person):
             names='股票名稱', 
             title='資產配置 (按市值)', 
             hole=0.4,
-            color_discrete_sequence=['#9DB2A6', '#A5C4D4', '#B8A5C7', '#D4A5A5', '#C7B8A1', '#B8D4C7', '#D4B5A5', '#B5A08A']
+            color_discrete_sequence=['#8B9B8E', '#7D8C9F', '#9B9FB2', '#7A8B8B', '#B8C0C8', '#A8B3B8']
         )
         fig.update_traces(textinfo='percent+label', pull=[0.1]*len(portfolio_df))
-        fig.update_layout(height=400)  # 固定高度
+        fig.update_layout(
+            height=400,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
         st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
         st.warning(f"圖表渲染失敗: {str(e)}")
 
 def render_overseas_portfolio_chart(df, broker_name):
-    """渲染海外投資組合圖表 - 優化版本"""
+    """渲染海外投資組合圖表 - 使用冷色調莫蘭迪配色"""
     if df.empty: 
         return
     try:
@@ -1094,16 +938,20 @@ def render_overseas_portfolio_chart(df, broker_name):
             names=name_col, 
             title=f'{broker_name} 資產配置 (按市值)', 
             hole=0.4,
-            color_discrete_sequence=['#9DB2A6', '#A5C4D4', '#B8A5C7', '#D4A5A5', '#C7B8A1', '#B8D4C7']
+            color_discrete_sequence=['#7D8C9F', '#8B9B8E', '#9B9FB2', '#A8B3B8', '#7A8B8B', '#B8C0C8']
         )
         fig.update_traces(textinfo='percent+label', pull=[0.1]*len(portfolio_df))
-        fig.update_layout(height=400)
+        fig.update_layout(
+            height=400,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
+        )
         st.plotly_chart(fig, use_container_width=True)
     except Exception:
         pass  # 靜默處理錯誤，避免影響主要流程
 
 def render_trend_chart(trend_df):
-    """渲染趨勢圖表 - 優化版本"""
+    """渲染趨勢圖表 - 使用冷色調莫蘭迪配色"""
     if trend_df.empty:
         st.info("查無資產趨勢數據。")
         return
@@ -1134,8 +982,8 @@ def render_trend_chart(trend_df):
             y=trend_df['總市值'], 
             mode='lines+markers', 
             name='總市值',
-            line=dict(color='#9DB2A6', width=3),
-            marker=dict(size=8, color='#9DB2A6')
+            line=dict(color='#7D8C9F', width=3),
+            marker=dict(size=6, color='#8B9B8E')
         ))
         fig.update_layout(
             title='資產趨勢', 
@@ -1143,7 +991,9 @@ def render_trend_chart(trend_df):
             yaxis_title='總市值 (NT$)',
             hovermode='x unified', 
             template="plotly_white",
-            height=400
+            height=400,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
         )
         st.plotly_chart(fig, use_container_width=True)
         
@@ -1158,10 +1008,10 @@ def main():
     
     person = render_user_selection()
     
-    # 優化：只在需要時顯示更新按鈕
+    # 優化：統一更新按鈕設計
     col1, col2, col3 = st.columns([1, 1, 8])
     with col2:
-        if st.button('🔄 更新', key='refresh_button', help='清除快取並重新載入數據'):
+        if st.button('🔄 更新數據', key='refresh_button', help='清除快取並重新載入數據'):
             st.cache_data.clear()
             st.rerun()
 
@@ -1286,9 +1136,15 @@ def main():
             
             fig = px.bar(
                 x=platforms, y=values, title='各平台投資總值比較 (USD)',
-                color=platforms, color_discrete_sequence=['#A5C4D4', '#D4A5A5', '#9B8E82']
+                color=platforms, color_discrete_sequence=['#7D8C9F', '#9B9FB2', '#8B9B8E']
             )
-            fig.update_layout(showlegend=False, yaxis_title='總市值 (USD)', height=400)
+            fig.update_layout(
+                showlegend=False, 
+                yaxis_title='總市值 (USD)', 
+                height=400,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
+            )
             st.plotly_chart(fig, use_container_width=True)
             
     else:
