@@ -929,14 +929,14 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
                 name='目標配置',
                 x=categories,
                 y=target_percentages,
-                marker_color='var(--morandi-sage)'
+                marker_color='#9DB2A6'
             ))
             
             fig_comparison.add_trace(go.Bar(
                 name='實際配置',
                 x=categories,
                 y=actual_percentages,
-                marker_color='var(--morandi-dusty-rose)'
+                marker_color='#D4A5A5'
             ))
             
             fig_comparison.update_layout(
