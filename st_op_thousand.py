@@ -1103,13 +1103,13 @@ def main():
 
         if not holdings_df.empty:
             render_summary_cards(person, holdings_df, dca_df)
-            tab1, tab2, tab3 = st.tabs(["📈 持股明細", "🥧 資產配置", "📊 資產趨勢"])
+            tab1, tab2, tab3 = st.tabs(["📈 持股明細", "🥧 持股分佈", "📊 資產趨勢"])
             
             with tab1:
                 st.subheader("持股明細")
                 render_holdings_table(holdings_df, person)
             with tab2:
-                st.subheader("資產配置")
+                st.subheader("持股分佈")
                 render_portfolio_chart(holdings_df, person)
             with tab3:
                 st.subheader("資產趨勢")
