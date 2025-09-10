@@ -438,94 +438,116 @@ def render_trading_form():
     st.markdown('<div class="trading-form-container">', unsafe_allow_html=True)
     st.markdown('<div class="trading-form-title">📝 新增交易記錄</div>', unsafe_allow_html=True)
     
-    with st.form("trading_form", clear_on_submit=True):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**持股狀態 (必選)**")
-            holding_type = st.radio(
-                "",
-                ["原本持有", "新持有"],
-                key="holding_type",
-                horizontal=True
-            )
-        
-        with col2:
-            st.write("**交易類型 (必選)**")
-            transaction_type = st.radio(
-                "",
-                ["買進", "賣出"],
-                key="transaction_type",
-                horizontal=True
-            )
-        
-        st.divider()
-        
-        col3, col4, col5, col6 = st.columns(4)
-        
-        with col3:
-            transaction_date = st.date_input(
-                "交易日期",
-                value=datetime.now(),
-                key="transaction_date"
-            )
-        
-        with col4:
-            stock_code = st.text_input(
-                "股票代號",
-                placeholder="例如: 2330",
-                key="stock_code"
-            )
-        
-        with col5:
-            stock_price = st.number_input(
-                "股價",
-                min_value=0.01,
-                value=100.0,
-                step=0.01,
-                format="%.2f",
-                key="stock_price"
-            )
-        
-        with col6:
-            # 根據交易類型設定預設股數
-            default_quantity = 1000 if transaction_type == "買進" else -1000
-            stock_quantity = st.number_input(
-                "股數",
-                value=abs(default_quantity),
-                step=1000,
-                key="stock_quantity"
-            )
-        
-        st.divider()
-        
-        # 計算預覽
-        if transaction_type == "買進":
-            total_amount = stock_price * stock_quantity
-            final_quantity = stock_quantity
+    # 使用 session_state 來追蹤表單狀態，實現即時更新
+    if 'trading_form_data' not in st.session_state:
+        st.session_state.trading_form_data = {
+            'holding_type': '原本持有',
+            'transaction_type': '買進',
+            'stock_code': '',
+            'stock_price': 100.0,
+            'stock_quantity': 1000
+        }
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**持股狀態 (必選)**")
+        holding_type = st.radio(
+            "",
+            ["原本持有", "新持有"],
+            key="holding_type_radio",
+            horizontal=True,
+            index=0 if st.session_state.trading_form_data['holding_type'] == '原本持有' else 1
+        )
+        st.session_state.trading_form_data['holding_type'] = holding_type
+    
+    with col2:
+        st.write("**交易類型 (必選)**")
+        transaction_type = st.radio(
+            "",
+            ["買進", "賣出"],
+            key="transaction_type_radio",
+            horizontal=True,
+            index=0 if st.session_state.trading_form_data['transaction_type'] == '買進' else 1
+        )
+        # 當交易類型改變時，自動調整股數預設值
+        if transaction_type != st.session_state.trading_form_data['transaction_type']:
+            st.session_state.trading_form_data['transaction_type'] = transaction_type
+            st.session_state.trading_form_data['stock_quantity'] = 1000 if transaction_type == '買進' else 1000
+    
+    st.divider()
+    
+    col3, col4, col5, col6 = st.columns(4)
+    
+    with col3:
+        transaction_date = st.date_input(
+            "交易日期",
+            value=datetime.now(),
+            key="transaction_date_input"
+        )
+    
+    with col4:
+        stock_code = st.text_input(
+            "股票代號",
+            placeholder="例如: 2330",
+            key="stock_code_input",
+            value=st.session_state.trading_form_data['stock_code']
+        )
+        st.session_state.trading_form_data['stock_code'] = stock_code
+    
+    with col5:
+        stock_price = st.number_input(
+            "股價",
+            min_value=0.01,
+            value=st.session_state.trading_form_data['stock_price'],
+            step=0.01,
+            format="%.2f",
+            key="stock_price_input"
+        )
+        st.session_state.trading_form_data['stock_price'] = stock_price
+    
+    with col6:
+        stock_quantity = st.number_input(
+            "股數",
+            value=st.session_state.trading_form_data['stock_quantity'],
+            step=1000,
+            min_value=1,
+            key="stock_quantity_input"
+        )
+        st.session_state.trading_form_data['stock_quantity'] = stock_quantity
+    
+    st.divider()
+    
+    # 即時計算預覽 - 現在會根據輸入值即時更新
+    if transaction_type == "買進":
+        total_amount = stock_price * stock_quantity
+        final_quantity = stock_quantity
+    else:
+        total_amount = stock_price * stock_quantity * (-1)
+        final_quantity = stock_quantity * (-1)
+    
+    col7, col8, col9 = st.columns(3)
+    with col7:
+        st.info(f"**交易金額:** NT${total_amount:,.0f}")
+    with col8:
+        st.info(f"**最終股數:** {final_quantity:,}")
+    with col9:
+        if holding_type == "新持有" and transaction_type == "買進":
+            st.success("**將同時新增至持股清單**")
         else:
-            total_amount = stock_price * stock_quantity * (-1)
-            final_quantity = stock_quantity * (-1)
-        
-        col7, col8, col9 = st.columns(3)
-        with col7:
-            st.info(f"**交易金額:** NT${total_amount:,.0f}")
-        with col8:
-            st.info(f"**最終股數:** {final_quantity:,}")
-        with col9:
-            if holding_type == "新持有" and transaction_type == "買進":
-                st.success("**將同時新增至持股清單**")
-            else:
-                st.info("**僅記錄交易**")
-        
-        # 提交按鈕
-        submitted = st.form_submit_button(
+            st.info("**僅記錄交易**")
+    
+    st.divider()
+    
+    # 改用普通按鈕而非 form_submit_button 來確保功能正常
+    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+    with col_btn2:
+        if st.button(
             "✅ 確定",
             use_container_width=True,
-            type="primary"
-        )
-        
-        if submitted:
+            type="primary",
+            key="submit_trading_record"
+        ):
             if not stock_code:
                 st.error("請輸入股票代號！")
             elif stock_quantity <= 0:
@@ -542,9 +564,18 @@ def render_trading_form():
                     )
                 
                 if success:
-                    st.success(f"✅ 交易記錄已成功新增！")
+                    st.success("✅ 交易記錄已成功新增！")
                     if holding_type == "新持有" and transaction_type == "買進":
                         st.success(f"✅ 股票 {stock_code} 已新增至持股清單！")
+                    
+                    # 重置表單數據
+                    st.session_state.trading_form_data = {
+                        'holding_type': '原本持有',
+                        'transaction_type': '買進',
+                        'stock_code': '',
+                        'stock_price': 100.0,
+                        'stock_quantity': 1000
+                    }
                     
                     # 清除快取並重新載入
                     time.sleep(1)
