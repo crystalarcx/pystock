@@ -408,7 +408,7 @@ def get_next_row_number(sheet_id, range_name):
 def process_trading_record(stock_code, stock_price, stock_quantity, transaction_type, holding_type, transaction_date):
     """處理交易記錄邏輯"""
     try:
-        sheet_id = SHEET_CONFIGS['rita']['id']
+        sheet_id = SHEET_CONFIGS['person']['id']
         
         # 計算總金額和股數（根據交易類型調整符號）
         if transaction_type == "買進":
@@ -465,7 +465,7 @@ def process_trading_record(stock_code, stock_price, stock_quantity, transaction_
         return False
 
 # 新增：交易表單渲染函數
-def render_trading_form():
+def render_trading_form_for_person(person):
     """渲染交易記錄輸入表單"""
     st.markdown('<div class="trading-form-container">', unsafe_allow_html=True)
     st.markdown('<div class="trading-form-title">📝 新增交易記錄</div>', unsafe_allow_html=True)
@@ -587,6 +587,7 @@ def render_trading_form():
             else:
                 with st.spinner('正在處理交易記錄...'):
                     success = process_trading_record(
+                        person=person,
                         stock_code=stock_code,
                         stock_price=stock_price,
                         stock_quantity=stock_quantity,
