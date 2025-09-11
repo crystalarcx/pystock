@@ -384,6 +384,26 @@ def get_stock_name(stock_code):
         st.warning(f"無法取得股票 {stock_code} 的名稱: {e}")
         return f"股票{stock_code}"
 
+# 新增：獲取下一行號的輔助函數
+def get_next_row_number(sheet_id, range_name):
+    """獲取工作表的下一行號"""
+    try:
+        service = get_google_sheets_service()
+        if not service:
+            return None
+        
+        result = service.spreadsheets().values().get(
+            spreadsheetId=sheet_id,
+            range=range_name
+        ).execute()
+        
+        values = result.get('values', [])
+        return len(values) + 1  # +1 因為要寫入下一行
+        
+    except Exception as e:
+        st.error(f"獲取行號失敗: {e}")
+        return None
+
 # 新增：交易記錄處理函數
 def process_trading_record(stock_code, stock_price, stock_quantity, transaction_type, holding_type, transaction_date):
     """處理交易記錄邏輯"""
@@ -419,9 +439,21 @@ def process_trading_record(stock_code, stock_price, stock_quantity, transaction_
         if holding_type == "新持有" and transaction_type == "買進":
             stock_name = get_stock_name(stock_code)
             
+            # 獲取將要寫入的行號
+            next_row = get_next_row_number(sheet_id, '總覽與損益!A:A')
+            if next_row is None:
+                next_row = 2  # 如果無法獲取，假設從第2行開始（第1行是標題）
+            
+            # 準備包含所有公式的資料
             holdings_values = [[
                 stock_code,    # Column A: 股票代號
-                stock_name     # Column B: 股票名稱
+                stock_name,    # Column B: 股票名稱
+                f'=IF(ISBLANK(A{next_row}), "", SUMIF(\'交易紀錄\'!B:B, A{next_row}, \'交易紀錄\'!F:F))',  # Column C: 總投入成本
+                f'=IF(ISBLANK(A{next_row}), "", SUMIF(\'交易紀錄\'!B:B, A{next_row}, \'交易紀錄\'!G:G))',  # Column D: 總持有股數
+                f'=IF(ISBLANK(A{next_row}), "", GOOGLEFINANCE("TPE:" & A{next_row}, "price"))',          # Column E: 目前股價
+                f'=IF(ISBLANK(A{next_row}), "", D{next_row}*E{next_row})',                               # Column F: 目前總市值
+                f'=IF(ISBLANK(A{next_row}), "", F{next_row}-C{next_row})',                               # Column G: 未實現損益
+                f'=IF(ISBLANK(A{next_row}), "", G{next_row}/C{next_row})'                                # Column H: 報酬率
             ]]
             
             success = append_to_sheet(sheet_id, '總覽與損益', holdings_values)
