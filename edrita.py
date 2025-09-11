@@ -405,7 +405,7 @@ def get_next_row_number(sheet_id, range_name):
         return None
 
 # 新增：交易記錄處理函數
-def process_trading_record(stock_code, stock_price, stock_quantity, transaction_type, holding_type, transaction_date):
+def process_trading_record(person, stock_code, stock_price, stock_quantity, transaction_type, holding_type, transaction_date):
     """處理交易記錄邏輯"""
     try:
         sheet_id = SHEET_CONFIGS['person']['id']
