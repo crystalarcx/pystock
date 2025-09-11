@@ -408,7 +408,7 @@ def get_next_row_number(sheet_id, range_name):
 def process_trading_record(person, stock_code, stock_price, stock_quantity, transaction_type, holding_type, transaction_date):
     """處理交易記錄邏輯"""
     try:
-        sheet_id = SHEET_CONFIGS['person']['id']
+        sheet_id = SHEET_CONFIGS[person]['id']
         
         # 計算總金額和股數（根據交易類型調整符號）
         if transaction_type == "買進":
