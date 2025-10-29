@@ -735,9 +735,6 @@ def load_cathay_dca_data():
         df = pd.DataFrame(normalized_values[1:], columns=normalized_values[0])
         df = df.dropna(how='all')
         
-        # 印出欄位名稱以便除錯
-        st.write("DEBUG - 國泰證券投資設定欄位:", list(df.columns))
-        
         # 處理數字欄位 - 使用更靈活的欄位匹配
         numeric_columns = []
         for col in df.columns:
