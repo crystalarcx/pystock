@@ -735,8 +735,15 @@ def load_cathay_dca_data():
         df = pd.DataFrame(normalized_values[1:], columns=normalized_values[0])
         df = df.dropna(how='all')
         
-        # 處理數字欄位
-        numeric_columns = ['每月投入金額', '扣款日', '券商折扣']
+        # 印出欄位名稱以便除錯
+        st.write("DEBUG - 國泰證券投資設定欄位:", list(df.columns))
+        
+        # 處理數字欄位 - 使用更靈活的欄位匹配
+        numeric_columns = []
+        for col in df.columns:
+            if any(keyword in col for keyword in ['金額', '扣款', '折扣', '價']):
+                numeric_columns.append(col)
+        
         for col in numeric_columns:
             if col in df.columns:
                 df[col] = df[col].apply(parse_number)
@@ -980,20 +987,42 @@ def render_cathay_dca_card(dca_df):
         st.markdown('<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div><div style="opacity: 0.8;">暫無設定資料</div></div>', unsafe_allow_html=True)
         return
     
-    required_columns = ['股票代號', '股票名稱', '每月投入金額', '扣款日']
-    if not all(col in dca_df.columns for col in required_columns):
-        st.markdown('<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div><div style="opacity: 0.8;">資料欄位不完整</div></div>', unsafe_allow_html=True)
+    # 更靈活的欄位檢查 - 尋找包含關鍵字的欄位
+    stock_code_col = None
+    stock_name_col = None
+    amount_col = None
+    day_col = None
+    
+    for col in dca_df.columns:
+        if '代號' in col or 'code' in col.lower():
+            stock_code_col = col
+        elif '名稱' in col or 'name' in col.lower():
+            stock_name_col = col
+        elif '金額' in col or 'amount' in col.lower():
+            amount_col = col
+        elif '扣款' in col or '日期' in col or 'day' in col.lower():
+            day_col = col
+    
+    # 如果找不到必要欄位，顯示除錯資訊
+    if not all([stock_code_col, stock_name_col, amount_col, day_col]):
+        st.markdown('<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="opacity: 0.8;">找到的欄位: {list(dca_df.columns)}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="opacity: 0.8; font-size: 0.8rem;">代號欄:{stock_code_col} | 名稱欄:{stock_name_col} | 金額欄:{amount_col} | 扣款欄:{day_col}</div></div>', unsafe_allow_html=True)
         return
     
+    # 計算每月總投入金額
+    total_monthly = 0
     st.markdown('<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">🇹🇼 定期定額設定</div>', unsafe_allow_html=True)
     
     for _, row in dca_df.iterrows():
-        if pd.notna(row['股票代號']) and pd.notna(row['股票名稱']):
-            monthly_amount = parse_number(row.get('每月投入金額', 0))
-            deduction_day = int(parse_number(row.get('扣款日', 0)))
-            st.markdown(f'<div class="dca-item"><strong>{row["股票代號"]} {row["股票名稱"]}</strong><br><small>每月{format_currency(monthly_amount, "USD")} | {deduction_day}號扣款</small></div>', unsafe_allow_html=True)
+        if pd.notna(row[stock_code_col]) and pd.notna(row[stock_name_col]):
+            monthly_amount = parse_number(row.get(amount_col, 0))
+            total_monthly += monthly_amount
+            deduction_day = int(parse_number(row.get(day_col, 0)))
+            st.markdown(f'<div class="dca-item"><strong>{row[stock_code_col]} {row[stock_name_col]}</strong><br><small>每月{format_currency(monthly_amount, "USD")} | {deduction_day}號扣款</small></div>', unsafe_allow_html=True)
     
-    st.markdown('</div>', unsafe_allow_html=True)
+    # 顯示每月總計
+    st.markdown(f'<div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid rgba(255,255,255,0.3); font-weight: 700; font-size: 1.1rem;">每月總計: {format_currency(total_monthly, "USD")}</div></div>', unsafe_allow_html=True)
 
 def render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_usd, fubon_total_ntd):
     """渲染ED海外投資綜合摘要卡片"""
