@@ -845,10 +845,10 @@ def get_asset_allocation_data():
         
         # 國泰證券處理
         cathay_df = ed_overseas_data.get('cathay', pd.DataFrame())
-        if not cathay_df.empty and len(cathay_df.columns) >= 8:
+        if not cathay_df.empty and len(cathay_df.columns) >= 9:
             for _, row in cathay_df.iterrows():
-                if len(row) > 7:
-                    category = str(row.iloc[7]).strip() if pd.notna(row.iloc[7]) else ''
+                if len(row) > 8:
+                    category = str(row.iloc[8]).strip() if pd.notna(row.iloc[8]) else ''  # 從第9欄（索引8，即I欄）讀取類別
                     if category in allocation_data and len(row) > 5:
                         value_usd = parse_number(row.iloc[5])
                         if value_usd > 0:
