@@ -11,7 +11,7 @@ from googleapiclient.discovery import build
 import re
 import time
 import yfinance as yf
-import twstock  # 新增 twstock 匯入
+import twstock
 
 # 頁面配置
 st.set_page_config(
@@ -21,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 精簡版CSS樣式 - 移除未使用的動畫和複雜效果
+# CSS樣式
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -30,7 +30,6 @@ st.markdown("""
     .main > div { padding-top: 1rem; }
     .css-1d391kg { display: none; }
     
-    /* 簡化主標題區域 */
     .hero-section {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -53,7 +52,6 @@ st.markdown("""
         opacity: 0.9;
     }
     
-    /* 簡化用戶選擇按鈕 */
     .user-selection-container {
         display: flex;
         flex-wrap: wrap;
@@ -65,37 +63,6 @@ st.markdown("""
         border-radius: 16px;
     }
     
-    .user-btn {
-        background: linear-gradient(135deg, #ffffff, #f8f9fa);
-        color: #2c3e50;
-        border: 2px solid rgba(52, 152, 219, 0.2);
-        border-radius: 12px;
-        padding: 16px 24px;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        text-decoration: none;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-width: 130px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-    
-    .user-btn:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.2);
-        border-color: #3498db;
-    }
-    
-    .user-btn.active {
-        background: linear-gradient(135deg, #3498db, #2980b9);
-        color: white;
-        border-color: #3498db;
-    }
-    
-    /* 簡化標籤頁 */
     .stTabs [data-baseweb="tab-list"] {
         gap: 6px;
         background: rgba(248, 249, 250, 0.8);
@@ -118,7 +85,6 @@ st.markdown("""
         color: white !important;
     }
     
-    /* 簡化指標卡片 */
     .metric-card {
         background: linear-gradient(135deg, #ffffff, #f8f9fa);
         border: 1px solid rgba(0,0,0,0.05);
@@ -128,6 +94,7 @@ st.markdown("""
         text-align: center;
         margin-bottom: 1rem;
         transition: transform 0.2s ease;
+        position: relative;
     }
     
     .metric-card::before {
@@ -171,7 +138,6 @@ st.markdown("""
     .profit { color: #27ae60; background: rgba(39, 174, 96, 0.1); }
     .loss { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
     
-    /* 簡化專用卡片 */
     .dca-card, .schwab-card, .cathay-card, .fubon-card, .allocation-card {
         color: white;
         padding: 1.5rem;
@@ -192,7 +158,6 @@ st.markdown("""
         margin-bottom: 8px;
     }
     
-    /* 圖表容器 */
     .chart-container {
         background: white;
         border-radius: 12px;
@@ -201,7 +166,6 @@ st.markdown("""
         margin-bottom: 1.5rem;
     }
     
-    /* 按鈕樣式 */
     .stButton > button {
         background: linear-gradient(135deg, #3498db, #2980b9);
         color: white;
@@ -216,7 +180,6 @@ st.markdown("""
         transform: translateY(-1px);
     }
     
-    /* 新增交易功能樣式 */
     .trading-form-container {
         background: linear-gradient(135deg, #f8f9fa, #e9ecef);
         border: 2px solid rgba(52, 152, 219, 0.2);
@@ -234,12 +197,56 @@ st.markdown("""
         text-align: center;
     }
     
-    /* 響應式 */
+    .notes-container {
+        background: linear-gradient(135deg, #fff5e6, #ffe8cc);
+        border: 2px solid rgba(243, 156, 18, 0.3);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .notes-title {
+        color: #e67e22;
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    
+    .note-item {
+        background: white;
+        border-left: 4px solid #f39c12;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.8rem;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: transform 0.2s ease;
+    }
+    
+    .note-item:hover {
+        transform: translateX(5px);
+    }
+    
+    .note-date {
+        color: #7f8c8d;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .note-content {
+        color: #2c3e50;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    
     @media (max-width: 768px) {
         .hero-title { font-size: 1.8rem; }
         .hero-section { padding: 1.5rem 1rem; }
         .metric-card { padding: 1.2rem; }
-        .user-btn { min-width: 180px; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -250,20 +257,23 @@ SHEET_CONFIGS = {
         'id': '17qQIU4KMtbTpo_ozguuzKFHf1HHOhuEBanXxCyE8k4M',
         'holdings_range': '總覽與損益!A:I',
         'dca_range': '投資設定!A:E',
-        'trend_range': '資產趨勢!A:B'
+        'trend_range': '資產趨勢!A:B',
+        'notes_range': 'notes!A:B'
     },
     'rita': {
         'id': '1ekCpufAJfrzt1cCLsubqLDUMU98_Ol5hTptOV7uXgpw',
         'holdings_range': '總覽與損益!A:I', 
         'dca_range': '投資設定!A:E',
         'trend_range': '資產趨勢!A:B',
-        'trading_records_range': '交易紀錄!A:G'  # 新增交易紀錄範圍
+        'trading_records_range': '交易紀錄!A:G',
+        'notes_range': 'notes!A:B'
     },
     'ed': {
         'id': '1oyG9eKrq57HMBjTWtg4tmKzHQiqc7r-2CWYyhA9ZHNc',
         'holdings_range': '總覽與損益!A:I', 
         'dca_range': '投資設定!A:E',
-        'trend_range': '資產趨勢!A:B'
+        'trend_range': '資產趨勢!A:B',
+        'notes_range': 'notes!A:B'
     },
     'ed_overseas': {
         'schwab': {
@@ -292,7 +302,6 @@ TARGET_ALLOCATION = {
     '黃金ETF': 0
 }
 
-# 優化1: 擴展快取設置
 @st.cache_resource(ttl=3600)
 def get_google_sheets_service():
     """取得Google Sheets服務實例"""
@@ -313,10 +322,9 @@ def get_google_sheets_service():
         st.error(f"Google Sheets API 設置失敗: {e}")
         return None
 
-# 優化2: 延長匯率快取時間到4小時
 @st.cache_data(ttl=14400)
 def get_usd_twd_rate():
-    """取得USDTWD 匯率 - 延長快取時間"""
+    """取得USDTWD 匯率"""
     try:
         ticker = yf.Ticker("USDTWD=X")
         data = ticker.history(period="1d")
@@ -325,13 +333,11 @@ def get_usd_twd_rate():
         else:
             return 31.0
     except Exception as e:
-        # 使用備用靜態匯率,減少API依賴
         return 31.0
 
-# 優化3: 為常用函數添加快取
 @st.cache_data
 def parse_number(value):
-    """解析數字,處理各種格式 - 加入快取"""
+    """解析數字,處理各種格式"""
     if pd.isna(value) or value is None:
         return 0.0
     if isinstance(value, (int, float)):
@@ -350,7 +356,7 @@ def parse_number(value):
         return 0.0
 
 def append_to_sheet(spreadsheet_id, range_name, values):
-    """將一列資料附加到指定的 Google Sheet 中。"""
+    """將一列資料附加到指定的 Google Sheet 中"""
     try:
         service = get_google_sheets_service()
         if not service:
@@ -372,7 +378,6 @@ def append_to_sheet(spreadsheet_id, range_name, values):
         st.error(f"寫入 Google Sheets 失敗: {e}")
         return False
 
-# 新增:取得股票名稱的函數
 @st.cache_data(ttl=3600)
 def get_stock_name(stock_code):
     """使用 twstock 取得股票名稱"""
@@ -386,7 +391,6 @@ def get_stock_name(stock_code):
         st.warning(f"無法取得股票 {stock_code} 的名稱: {e}")
         return f"股票{stock_code}"
 
-# 新增:獲取下一行號的輔助函數
 def get_next_row_number(sheet_id, range_name):
     """獲取工作表的下一行號"""
     try:
@@ -400,62 +404,54 @@ def get_next_row_number(sheet_id, range_name):
         ).execute()
         
         values = result.get('values', [])
-        return len(values) + 1  # +1 因為要寫入下一行
+        return len(values) + 1
         
     except Exception as e:
         st.error(f"獲取行號失敗: {e}")
         return None
 
-# 新增:交易記錄處理函數
 def process_trading_record(person, stock_code, stock_price, stock_quantity, transaction_type, holding_type, transaction_date):
     """處理交易記錄邏輯"""
     try:
         sheet_id = SHEET_CONFIGS[person]['id']
         
-        # 計算總金額和股數(根據交易類型調整符號)
         if transaction_type == "買進":
             total_amount = stock_price * stock_quantity
             final_quantity = stock_quantity
-        else:  # 賣出
+        else:
             total_amount = stock_price * stock_quantity * (-1)
             final_quantity = stock_quantity * (-1)
         
-        # 準備寫入交易紀錄的資料
         trading_record_values = [[
-            transaction_date.strftime('%Y/%m/%d'),  # Column A: 交易日期
-            stock_code,                             # Column B: 股票代號
-            stock_price,                           # Column C: 買入股價
-            '',                                    # Column D: 留空
-            '',                                    # Column E: 留空
-            total_amount,                          # Column F: 計算金額
-            final_quantity                         # Column G: 股數
+            transaction_date.strftime('%Y/%m/%d'),
+            stock_code,
+            stock_price,
+            '',
+            '',
+            total_amount,
+            final_quantity
         ]]
         
-        # 寫入交易紀錄
         success = append_to_sheet(sheet_id, '交易紀錄', trading_record_values)
         
         if not success:
             return False
         
-        # 如果是「新持有」且「買進」,則額外寫入總覽與損益
         if holding_type == "新持有" and transaction_type == "買進":
             stock_name = get_stock_name(stock_code)
-            
-            # 獲取將要寫入的行號
             next_row = get_next_row_number(sheet_id, '總覽與損益!A:A')
             if next_row is None:
-                next_row = 2  # 如果無法獲取,假設從第2行開始(第1行是標題)
+                next_row = 2
             
-            # 準備包含所有公式的資料
             holdings_values = [[
-                stock_code,    # Column A: 股票代號
-                stock_name,    # Column B: 股票名稱
-                f'=IF(ISBLANK(A{next_row}), "", SUMIF(\'交易紀錄\'!B:B, A{next_row}, \'交易紀錄\'!F:F))',  # Column C: 總投入成本
-                f'=IF(ISBLANK(A{next_row}), "", SUMIF(\'交易紀錄\'!B:B, A{next_row}, \'交易紀錄\'!G:G))',  # Column D: 總持有股數
-                f'=IF(ISBLANK(A{next_row}), "", GOOGLEFINANCE("TPE:" & A{next_row}, "price"))',          # Column E: 目前股價
-                f'=IF(ISBLANK(A{next_row}), "", D{next_row}*E{next_row})',                               # Column F: 目前總市值
-                f'=IF(ISBLANK(A{next_row}), "", F{next_row}-C{next_row})',                               # Column G: 未實現損益
-                f'=IF(ISBLANK(A{next_row}), "", G{next_row}/C{next_row})'                                # Column H: 報酬率
+                stock_code,
+                stock_name,
+                f'=IF(ISBLANK(A{next_row}), "", SUMIF(\'交易紀錄\'!B:B, A{next_row}, \'交易紀錄\'!F:F))',
+                f'=IF(ISBLANK(A{next_row}), "", SUMIF(\'交易紀錄\'!B:B, A{next_row}, \'交易紀錄\'!G:G))',
+                f'=IF(ISBLANK(A{next_row}), "", GOOGLEFINANCE("TPE:" & A{next_row}, "price"))',
+                f'=IF(ISBLANK(A{next_row}), "", D{next_row}*E{next_row})',
+                f'=IF(ISBLANK(A{next_row}), "", F{next_row}-C{next_row})',
+                f'=IF(ISBLANK(A{next_row}), "", G{next_row}/C{next_row})'
             ]]
             
             success = append_to_sheet(sheet_id, '總覽與損益', holdings_values)
@@ -466,13 +462,11 @@ def process_trading_record(person, stock_code, stock_price, stock_quantity, tran
         st.error(f"處理交易記錄時發生錯誤: {e}")
         return False
 
-# 新增:交易表單渲染函數
 def render_trading_form_for_person(person):
     """渲染交易記錄輸入表單"""
     st.markdown('<div class="trading-form-container">', unsafe_allow_html=True)
     st.markdown('<div class="trading-form-title">📝 新增交易記錄</div>', unsafe_allow_html=True)
     
-    # 使用 session_state 來追蹤表單狀態,實現即時更新
     if 'trading_form_data' not in st.session_state:
         st.session_state.trading_form_data = {
             'holding_type': '原本持有',
@@ -504,10 +498,9 @@ def render_trading_form_for_person(person):
             horizontal=True,
             index=0 if st.session_state.trading_form_data['transaction_type'] == '買進' else 1
         )
-        # 當交易類型改變時,自動調整股數預設值
         if transaction_type != st.session_state.trading_form_data['transaction_type']:
             st.session_state.trading_form_data['transaction_type'] = transaction_type
-            st.session_state.trading_form_data['stock_quantity'] = 1000 if transaction_type == '買進' else 1000
+            st.session_state.trading_form_data['stock_quantity'] = 1000
     
     st.divider()
     
@@ -552,7 +545,6 @@ def render_trading_form_for_person(person):
     
     st.divider()
     
-    # 即時計算預覽 - 現在會根據輸入值即時更新
     if transaction_type == "買進":
         total_amount = stock_price * stock_quantity
         final_quantity = stock_quantity
@@ -573,7 +565,6 @@ def render_trading_form_for_person(person):
     
     st.divider()
     
-    # 改用普通按鈕而非 form_submit_button 來確保功能正常
     col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
     with col_btn2:
         if st.button(
@@ -603,7 +594,6 @@ def render_trading_form_for_person(person):
                     if holding_type == "新持有" and transaction_type == "買進":
                         st.success(f"✅ 股票 {stock_code} 已新增至持股清單!")
                     
-                    # 重置表單數據
                     st.session_state.trading_form_data = {
                         'holding_type': '原本持有',
                         'transaction_type': '買進',
@@ -612,7 +602,6 @@ def render_trading_form_for_person(person):
                         'stock_quantity': 1000
                     }
                     
-                    # 清除快取並重新載入
                     time.sleep(1)
                     st.cache_data.clear()
                     st.rerun()
@@ -621,10 +610,9 @@ def render_trading_form_for_person(person):
     
     st.markdown('</div>', unsafe_allow_html=True)
 
-# 優化4: 延長數據快取時間到30分鐘
 @st.cache_data(ttl=1800)
 def load_sheet_data(person, data_type, broker=None):
-    """從Google Sheets載入數據 - 延長快取時間"""
+    """從Google Sheets載入數據"""
     service = get_google_sheets_service()
     if not service:
         return pd.DataFrame()
@@ -659,14 +647,12 @@ def load_sheet_data(person, data_type, broker=None):
         if not values or len(values) < 2:
             return pd.DataFrame()
         
-        # 簡化數據處理邏輯
         max_cols = len(values[0]) if values else 0
         normalized_values = [row + [''] * (max_cols - len(row)) for row in values]
         
         df = pd.DataFrame(normalized_values[1:], columns=normalized_values[0])
         df = df.dropna(how='all')
         
-        # 簡化數字欄位處理
         if person == 'ed_overseas':
             numeric_columns = [col for col in df.columns if any(keyword in col for keyword in ['價', '成本', '市值', '損益', '股數', '率'])]
         elif data_type == 'holdings':
@@ -688,35 +674,17 @@ def load_sheet_data(person, data_type, broker=None):
         st.error(f"載入{person} {broker or data_type}數據失敗: {str(e)}")
         return pd.DataFrame()
 
-# 優化5: 批次載入相關數據
-@st.cache_data(ttl=1800)
-def load_person_all_data(person):
-    """批次載入單一用戶的所有數據"""
-    if person == 'ed_overseas':
-        return {
-            'schwab': load_sheet_data('ed_overseas', None, 'schwab'),
-            'cathay': load_sheet_data('ed_overseas', None, 'cathay'),
-            'cathay_dca': load_cathay_dca_data(),
-            'fubon_uk': load_sheet_data('ed_overseas', None, 'fubon_uk')
-        }
-    else:
-        return {
-            'holdings': load_sheet_data(person, 'holdings'),
-            'dca': load_sheet_data(person, 'dca'),
-            'trend': load_sheet_data(person, 'trend')
-        }
-
-@st.cache_data(ttl=1800)
-def load_cathay_dca_data():
-    """載入國泰證券定期定額設定"""
+@st.cache_data(ttl=600)
+def load_notes_data(person):
+    """載入投資筆記數據"""
     service = get_google_sheets_service()
     if not service:
         return pd.DataFrame()
     
     try:
-        config = SHEET_CONFIGS['ed_overseas']['cathay']
+        config = SHEET_CONFIGS[person]
         sheet_id = config['id']
-        range_name = config.get('dca_range')
+        range_name = config.get('notes_range')
         
         if not range_name:
             return pd.DataFrame()
@@ -736,768 +704,55 @@ def load_cathay_dca_data():
         df = pd.DataFrame(normalized_values[1:], columns=normalized_values[0])
         df = df.dropna(how='all')
         
-        # 處理數字欄位 - 使用更靈活的欄位匹配
-        numeric_columns = []
-        for col in df.columns:
-            if any(keyword in col for keyword in ['金額', '扣款', '折扣', '價']):
-                numeric_columns.append(col)
-        
-        for col in numeric_columns:
-            if col in df.columns:
-                df[col] = df[col].apply(parse_number)
+        if '日期' in df.columns:
+            df['日期'] = pd.to_datetime(df['日期'], errors='coerce')
         
         return df
         
     except Exception as e:
-        st.error(f"載入國泰證券定期定額設定失敗: {str(e)}")
+        st.error(f"載入{person}筆記失敗: {str(e)}")
         return pd.DataFrame()
 
-def get_schwab_total_value(schwab_df):
-    """從schwab工作表的B欄取得最下方的總市值數據"""
+def save_note(person, note_content):
+    """儲存筆記到 Google Sheets"""
     try:
-        if schwab_df.empty or len(schwab_df.columns) < 2:
-            return 0.0
+        sheet_id = SHEET_CONFIGS[person]['id']
+        current_date = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
         
-        b_column = schwab_df.iloc[:, 1]
+        values_to_append = [[current_date, note_content]]
         
-        for i in range(len(b_column) - 1, -1, -1):
-            value = b_column.iloc[i]
-            if pd.notna(value) and str(value).strip() != '':
-                parsed_value = parse_number(value)
-                if parsed_value > 0:
-                    return parsed_value
+        success = append_to_sheet(sheet_id, 'notes', values_to_append)
         
-        return 0.0
-    except Exception as e:
-        st.error(f"解析嘉信證券總市值失敗: {e}")
-        return 0.0
-
-def get_cathay_total_value(cathay_df):
-    """從總覽與損益工作表的F欄計算總市值"""
-    try:
-        if cathay_df.empty or len(cathay_df.columns) < 6:
-            return 0.0
-        
-        f_column = cathay_df.iloc[:, 5]
-        
-        total = 0.0
-        for value in f_column:
-            if pd.notna(value) and str(value).strip() != '':
-                parsed_value = parse_number(value)
-                if parsed_value > 0:
-                    total += parsed_value
-        
-        return total
-    except Exception as e:
-        st.error(f"計算國泰證券總市值失敗: {e}")
-        return 0.0
-
-def get_fubon_uk_total_value(fubon_df):
-    """計算富邦英股總市值"""
-    try:
-        if fubon_df.empty:
-            return 0.0, 0.0
-        
-        value_usd_col = None
-        value_ntd_col = None
-        
-        for col in fubon_df.columns:
-            if '市值' in col and 'USD' in col:
-                value_usd_col = col
-            elif '市值' in col and 'NTD' in col:
-                value_ntd_col = col
-        
-        total_value_usd = fubon_df[value_usd_col].sum() if value_usd_col else 0
-        total_value_ntd = fubon_df[value_ntd_col].sum() if value_ntd_col else 0
-        
-        return total_value_usd, total_value_ntd
+        return success
         
     except Exception as e:
-        st.error(f"計算富邦英股總市值失敗: {e}")
-        return 0.0, 0.0
+        st.error(f"儲存筆記失敗: {e}")
+        return False
 
-# 優化6: 快取資產配置計算
-@st.cache_data(ttl=1800)
-def get_asset_allocation_data():
-    """計算資產配置數據 - 添加快取"""
-    try:
-        usd_twd_rate = get_usd_twd_rate()
-        allocation_data = {category: {'value_twd': 0.0, 'percentage': 0.0} for category in TARGET_ALLOCATION.keys()}
-        
-        # 批次載入所有需要的數據
-        rita_data = load_person_all_data('rita')
-        ed_data = load_person_all_data('ed')
-        ed_overseas_data = load_person_all_data('ed_overseas')
-        
-        # 處理台股數據
-        for person_data in [rita_data, ed_data]:
-            holdings_df = person_data.get('holdings', pd.DataFrame())
-            if not holdings_df.empty and '類別' in holdings_df.columns and '目前總市值' in holdings_df.columns:
-                for _, row in holdings_df.iterrows():
-                    category = row.get('類別', '').strip()
-                    if category in allocation_data:
-                        value_twd = parse_number(row.get('目前總市值', 0))
-                        allocation_data[category]['value_twd'] += value_twd
-        
-        # 處理海外投資
-        schwab_total_usd = get_schwab_total_value(ed_overseas_data.get('schwab', pd.DataFrame()))
-        if schwab_total_usd > 0:
-            allocation_data['美股個股']['value_twd'] += schwab_total_usd * usd_twd_rate
-        
-        # 國泰證券處理
-        cathay_df = ed_overseas_data.get('cathay', pd.DataFrame())
-        if not cathay_df.empty and len(cathay_df.columns) >= 9:
-            for _, row in cathay_df.iterrows():
-                if len(row) > 8:
-                    category = str(row.iloc[8]).strip() if pd.notna(row.iloc[8]) else ''  # 從第9欄（索引8，即I欄）讀取類別
-                    if category in allocation_data and len(row) > 5:
-                        value_usd = parse_number(row.iloc[5])
-                        if value_usd > 0:
-                            allocation_data[category]['value_twd'] += value_usd * usd_twd_rate
-        
-        # 富邦英股處理
-        fubon_df = ed_overseas_data.get('fubon_uk', pd.DataFrame())
-        if not fubon_df.empty and len(fubon_df.columns) >= 13:
-            value_usd_col_idx = None
-            for i, col in enumerate(fubon_df.columns):
-                if '市值' in col and 'USD' in col:
-                    value_usd_col_idx = i
-                    break
-            
-            if value_usd_col_idx is not None:
-                for _, row in fubon_df.iterrows():
-                    if len(row) > max(12, value_usd_col_idx):
-                        category = str(row.iloc[12]).strip() if pd.notna(row.iloc[12]) else ''
-                        if category in allocation_data:
-                            value_usd = parse_number(row.iloc[value_usd_col_idx])
-                            if value_usd > 0:
-                                allocation_data[category]['value_twd'] += value_usd * usd_twd_rate
-        
-        # 計算百分比
-        total_value = sum([data['value_twd'] for data in allocation_data.values()])
-        
-        if total_value > 0:
-            for category in allocation_data:
-                allocation_data[category]['percentage'] = (allocation_data[category]['value_twd'] / total_value) * 100
-        
-        return allocation_data, total_value, usd_twd_rate
-        
-    except Exception as e:
-        st.error(f"計算資產配置失敗: {e}")
-        return {}, 0.0, 31.0
-
-# 優化7: 快取格式化函數
-@st.cache_data
-def format_currency(amount, currency='TWD', show_prefix=True):
-    """格式化貨幣 - 添加快取"""
-    if currency == 'USD':
-        return f"${amount:,.2f}"
-    else:
-        if show_prefix:
-            return f"NT${amount:,.0f}"
-        else:
-            return f"{amount:,.0f}"
-
-@st.cache_data
-def format_percentage(value):
-    """格式化百分比 - 添加快取"""
-    return f"{'+' if value > 0 else ''}{value:.2f}%"
-
-def render_user_selection():
-    """渲染使用者選擇按鈕"""
-    st.markdown('<div class="user-selection-container"></div>', unsafe_allow_html=True)
+def render_notes_section(person, notes_df):
+    """渲染筆記功能區塊"""
+    st.markdown('<div class="notes-container">', unsafe_allow_html=True)
+    st.markdown('<div class="notes-title">📝 投資筆記</div>', unsafe_allow_html=True)
     
-    user_options = [
-        {'key': 'jason', 'icon': '👨‍💼', 'label': 'Jason', 'desc': '台股投資'},
-        {'key': 'rita', 'icon': '👩‍💼', 'label': 'Rita', 'desc': '台股投資'},
-        {'key': 'ed', 'icon': '👨‍💻', 'label': 'Ed', 'desc': '台股投資'},
-        {'key': 'ed_overseas', 'icon': '🌍', 'label': 'Ed', 'desc': '海外總覽'},
-        {'key': 'asset_allocation', 'icon': '📊', 'label': '資產配置', 'desc': '整體配置'}
-    ]
-    
-    cols = st.columns(len(user_options))
-    
-    if 'selected_person' not in st.session_state:
-        st.session_state.selected_person = 'jason'
-    
-    for i, option in enumerate(user_options):
-        with cols[i]:
-            if st.button(
-                f"{option['icon']}\n{option['label']}\n{option['desc']}", 
-                key=f"btn_{option['key']}",
-                use_container_width=True
-            ):
-                st.session_state.selected_person = option['key']
-    
-    return st.session_state.selected_person
-
-def render_summary_cards(person, holdings_df, dca_df=None):
-    """渲染摘要卡片 - 簡化錯誤處理"""
-    if person in ['ed_overseas', 'asset_allocation']:
-        return
-    
-    try:
-        required_columns = ['總投入成本', '目前總市值', '未實現損益']
-        if not all(col in holdings_df.columns for col in required_columns) or holdings_df.empty:
-            st.warning("持股數據不完整或為空")
-            return
+    with st.form(key=f"note_form_{person}", clear_on_submit=True):
+        st.write("##### ✍️ 新增筆記")
+        note_content = st.text_area(
+            "筆記內容",
+            placeholder="記錄你的投資想法、市場觀察、交易原因...",
+            height=120,
+            key=f"note_content_{person}"
+        )
         
-        total_cost = holdings_df['總投入成本'].sum()
-        total_value = holdings_df['目前總市值'].sum()
-        total_pl = holdings_df['未實現損益'].sum()
-        total_return = (total_pl / total_cost) * 100 if total_cost > 0 else 0
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.markdown(f'<div class="metric-card"><div class="metric-label">總投入成本</div><div class="metric-value">{format_currency(total_cost)}</div></div>', unsafe_allow_html=True)
-        
+        col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.markdown(f'<div class="metric-card"><div class="metric-label">目前市值</div><div class="metric-value">{format_currency(total_value)}</div></div>', unsafe_allow_html=True)
+            submitted = st.form_submit_button("💾 儲存筆記", use_container_width=True, type="primary")
         
-        with col3:
-            profit_class = 'profit' if total_pl >= 0 else 'loss'
-            st.markdown(f'<div class="metric-card"><div class="metric-label">未實現損益</div><div class="metric-value {profit_class}">{format_currency(total_pl)}</div><div class="metric-change {profit_class}">{format_percentage(total_return)}</div></div>', unsafe_allow_html=True)
-        
-        with col4:
-            if dca_df is not None and not dca_df.empty and all(col in dca_df.columns for col in ['股票代號', '股票名稱', '每月投入金額', '扣款日']):
-                with st.container():
-                    # 計算每月總投入金額
-                    total_monthly = 0
-                    st.markdown('<div class="dca-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div>', unsafe_allow_html=True)
-                    for _, row in dca_df.iterrows():
-                        if pd.notna(row['股票代號']) and pd.notna(row['股票名稱']):
-                            monthly_amount = parse_number(row.get('每月投入金額', 0))
-                            total_monthly += monthly_amount
-                            deduction_day = int(parse_number(row.get('扣款日', 0)))
-                            st.markdown(f'<div class="dca-item"><strong>{row["股票代號"]} {row["股票名稱"]}</strong><br><small>每月{format_currency(monthly_amount)} | {deduction_day}號扣款</small></div>', unsafe_allow_html=True)
-                    # 顯示每月總計
-                    st.markdown(f'<div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid rgba(255,255,255,0.3); font-weight: 700; font-size: 1.1rem;">每月總計: {format_currency(total_monthly)}</div></div>', unsafe_allow_html=True)
+        if submitted:
+            if not note_content or note_content.strip() == "":
+                st.error("❌ 筆記內容不能為空!")
             else:
-                st.markdown('<div class="dca-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div><div style="opacity: 0.8;">暫無設定資料</div></div>', unsafe_allow_html=True)
-                
-    except Exception as e:
-        st.error(f"台股投資摘要卡片渲染錯誤: {str(e)}")
-
-def render_cathay_dca_card(dca_df):
-    """渲染國泰證券定期定額設定卡片"""
-    if dca_df is None or dca_df.empty:
-        st.markdown('<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div><div style="opacity: 0.8;">暫無設定資料</div></div>', unsafe_allow_html=True)
-        return
-    
-    # 更靈活的欄位檢查 - 尋找包含關鍵字的欄位
-    stock_code_col = None
-    stock_name_col = None
-    amount_col = None
-    day_col = None
-    
-    for col in dca_df.columns:
-        if '代號' in col or 'code' in col.lower():
-            stock_code_col = col
-        elif '名稱' in col or 'name' in col.lower():
-            stock_name_col = col
-        elif '金額' in col or 'amount' in col.lower():
-            amount_col = col
-        elif '扣款' in col or '日期' in col or 'day' in col.lower():
-            day_col = col
-    
-    # 如果找不到必要欄位，顯示除錯資訊
-    if not all([stock_code_col, stock_name_col, amount_col, day_col]):
-        st.markdown('<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div>', unsafe_allow_html=True)
-        st.markdown(f'<div style="opacity: 0.8;">找到的欄位: {list(dca_df.columns)}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div style="opacity: 0.8; font-size: 0.8rem;">代號欄:{stock_code_col} | 名稱欄:{stock_name_col} | 金額欄:{amount_col} | 扣款欄:{day_col}</div></div>', unsafe_allow_html=True)
-        return
-    
-    # 計算每月總投入金額
-    total_monthly = 0
-    st.markdown('<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">🇹🇼 定期定額設定</div>', unsafe_allow_html=True)
-    
-    for _, row in dca_df.iterrows():
-        if pd.notna(row[stock_code_col]) and pd.notna(row[stock_name_col]):
-            monthly_amount = parse_number(row.get(amount_col, 0))
-            total_monthly += monthly_amount
-            deduction_day = int(parse_number(row.get(day_col, 0)))
-            st.markdown(f'<div class="dca-item"><strong>{row[stock_code_col]} {row[stock_name_col]}</strong><br><small>每月{format_currency(monthly_amount, "USD")} | {deduction_day}號扣款</small></div>', unsafe_allow_html=True)
-    
-    # 顯示每月總計
-    st.markdown(f'<div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid rgba(255,255,255,0.3); font-weight: 700; font-size: 1.1rem;">每月總計: {format_currency(total_monthly, "USD")}</div></div>', unsafe_allow_html=True)
-
-def render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_usd, fubon_total_ntd):
-    """渲染ED海外投資綜合摘要卡片"""
-    total_combined_usd = schwab_total_usd + cathay_total_usd + fubon_total_usd
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown(f'<div class="schwab-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; opacity: 0.9;">🇺🇸 嘉信證券</div><div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem;">{format_currency(schwab_total_usd, "USD")}</div><div style="opacity: 0.8;">美股個股總市值</div></div>', unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(f'<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; opacity: 0.9;">🇹🇼 國泰證券</div><div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem;">{format_currency(cathay_total_usd, "USD")}</div><div style="opacity: 0.8;">美股ETF總市值</div></div>', unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(f'<div class="fubon-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; opacity: 0.9;">🇬🇧 富邦英股</div><div style="font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem;">{format_currency(fubon_total_usd, "USD")}</div><div style="opacity: 0.8;">英股總市值</div></div>', unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown(f'<div class="metric-card" style="border: none; background: #e8f5e9;"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #388e3c; opacity: 0.9;">總資產 (USD)</div><div style="font-size: 2.2rem; font-weight: 700; color: #1b5e20; margin-bottom: 0.5rem;">{format_currency(total_combined_usd, "USD")}</div><div style="opacity: 0.8;">三平台合計</div></div>', unsafe_allow_html=True)
-
-def render_asset_allocation_summary(allocation_data, total_value, usd_twd_rate):
-    """渲染資產配置摘要"""
-    st.subheader("🎯 目標 vs 實際配置比較")
-    
-    categories = list(TARGET_ALLOCATION.keys())
-    target_percentages = [TARGET_ALLOCATION[cat] for cat in categories]
-    actual_percentages = [allocation_data[cat]['percentage'] for cat in categories]
-    actual_values = [allocation_data[cat]['value_twd'] for cat in categories]
-    differences = [actual - target for actual, target in zip(actual_percentages, target_percentages)]
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown(f'<div class="metric-card"><div class="metric-label">總資產</div><div class="metric-value">{format_currency(total_value)}</div></div>', unsafe_allow_html=True)
-    with col2:
-        st.markdown(f'<div class="metric-card"><div class="metric-label">USD/TWD 匯率</div><div class="metric-value">{usd_twd_rate:.2f}</div></div>', unsafe_allow_html=True)
-    
-    comparison_df = pd.DataFrame({
-        '資產類別': categories,
-        '目標配置(%)': target_percentages,
-        '實際配置(%)': [f"{x:.1f}" for x in actual_percentages],
-        '實際金額(台幣)': [format_currency(x, show_prefix=False) for x in actual_values],
-        '差距(%)': [f"{'+' if x > 0 else ''}{x:.1f}" for x in differences]
-    })
-    
-    st.markdown("### 📊 配置詳細比較")
-    st.dataframe(
-        comparison_df.style.format({
-            '目標配置(%)': "{:.0f}%"
-        }).applymap(
-            lambda x: 'color: green' if isinstance(x, str) and x.startswith('+') 
-            else ('color: red' if isinstance(x, str) and x.startswith('-') else ''),
-            subset=['差距(%)']
-        ),
-        use_container_width=True
-    )
-    
-    return categories, target_percentages, actual_percentages, differences
-
-# 優化8: 延緩載入圖表組件
-def render_allocation_charts(categories, target_percentages, actual_percentages, differences):
-    """渲染資產配置圖表 - 優化版"""
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # 使用 st.empty() 實現條件渲染
-        chart_container1 = st.empty()
-        with chart_container1.container():
-            fig_comparison = go.Figure()
-            
-            fig_comparison.add_trace(go.Bar(
-                name='目標配置',
-                x=categories,
-                y=target_percentages,
-                marker_color='rgba(52, 152, 219, 0.7)'
-            ))
-            
-            fig_comparison.add_trace(go.Bar(
-                name='實際配置',
-                x=categories,
-                y=actual_percentages,
-                marker_color='rgba(231, 76, 60, 0.7)'
-            ))
-            
-            fig_comparison.update_layout(
-                title='目標 vs 實際配置比較',
-                xaxis_title='資產類別',
-                yaxis_title='配置比例(%)',
-                barmode='group',
-                template="plotly_white",
-                height=400  # 固定高度以提升渲染速度
-            )
-            
-            st.plotly_chart(fig_comparison, use_container_width=True)
-    
-    with col2:
-        chart_container2 = st.empty()
-        with chart_container2.container():
-            colors = ['green' if x >= 0 else 'red' for x in differences]
-            
-            fig_diff = go.Figure(data=[
-                go.Bar(
-                    x=categories,
-                    y=differences,
-                    marker_color=colors,
-                    text=[f"{x:+.1f}%" for x in differences],
-                    textposition='auto'
-                )
-            ])
-            
-            fig_diff.update_layout(
-                title='配置差距 (實際 - 目標)',
-                xaxis_title='資產類別',
-                yaxis_title='差距(%)',
-                template="plotly_white",
-                height=400,
-                yaxis=dict(zeroline=True, zerolinewidth=2, zerolinecolor='black')
-            )
-            
-            st.plotly_chart(fig_diff, use_container_width=True)
-    
-    # 餅狀圖比較 - 簡化版本
-    col3, col4 = st.columns(2)
-    
-    with col3:
-        fig_target_pie = px.pie(
-            values=target_percentages,
-            names=categories,
-            title='目標資產配置',
-            color_discrete_sequence=px.colors.sequential.Blues_r
-        )
-        fig_target_pie.update_layout(height=350)
-        st.plotly_chart(fig_target_pie, use_container_width=True)
-    
-    with col4:
-        fig_actual_pie = px.pie(
-            values=actual_percentages,
-            names=categories,
-            title='實際資產配置',
-            color_discrete_sequence=px.colors.sequential.Reds_r
-        )
-        fig_actual_pie.update_layout(height=350)
-        st.plotly_chart(fig_actual_pie, use_container_width=True)
-
-def render_holdings_table(holdings_df, person):
-    """渲染持股表格 - 添加數字格式化"""
-    if holdings_df.empty:
-        st.info("查無持股數據。")
-        return
-    
-    if person != 'ed_overseas':
-        # 格式化數字欄位,添加千位分隔符
-        format_dict = {}
-        for col in holdings_df.columns:
-            if col in ['目前股價']:
-                format_dict[col] = "{:.2f}"
-            elif col in ['總持有股數']:
-                format_dict[col] = "{:,.0f}"
-            elif col in ['總投入成本', '目前總市值', '未實現損益']:
-                format_dict[col] = "NT${:,.0f}"
-            elif col in ['報酬率']:
-                format_dict[col] = "{:,.2f}%"
-        
-        if format_dict:
-            styled_df = holdings_df.style.format(format_dict)
-            st.dataframe(styled_df, use_container_width=True)
-        else:
-            st.dataframe(holdings_df, use_container_width=True)
-
-def render_overseas_holdings_table(df, broker_name):
-    """渲染海外持股表格 - 優化版本"""
-    if df.empty:
-        st.info(f"查無{broker_name}持股數據。")
-        return
-    
-    if broker_name == "富邦英股":
-        # 只顯示必要欄位,減少處理時間
-        essential_columns = [col for col in df.columns if any(keyword in col for keyword in ['股票代號', '股票名稱', '市值', '損益', '報酬率'])]
-        display_df = df[essential_columns] if essential_columns else df
-        st.dataframe(display_df, use_container_width=True)
-    else:
-        st.dataframe(df, use_container_width=True)
-    
-def render_portfolio_chart(holdings_df, person):
-    """渲染投資組合圖表 - 優化版本"""
-    if holdings_df.empty or person == 'ed_overseas': 
-        return
-        
-    try:
-        portfolio_df = holdings_df[['股票名稱', '目前總市值']].copy()
-        portfolio_df = portfolio_df[portfolio_df['目前總市值'] > 0]
-        
-        if portfolio_df.empty:
-            return
-            
-        fig = px.pie(
-            portfolio_df, 
-            values='目前總市值', 
-            names='股票名稱', 
-            title='資產配置 (按市值)', 
-            hole=0.4,
-            color_discrete_sequence=px.colors.sequential.Agsunset
-        )
-        fig.update_traces(textinfo='percent+label', pull=[0.1]*len(portfolio_df))
-        fig.update_layout(height=400)  # 固定高度
-        st.plotly_chart(fig, use_container_width=True)
-    except Exception as e:
-        st.warning(f"圖表渲染失敗: {str(e)}")
-
-def render_overseas_portfolio_chart(df, broker_name):
-    """渲染海外投資組合圖表 - 優化版本"""
-    if df.empty: 
-        return
-    try:
-        value_col, name_col = None, None
-        for col in df.columns:
-            if '市值' in col and ('USD' in col or 'NTD' not in col): 
-                value_col = col
-                break
-        for col in df.columns:
-            if '名稱' in col: 
-                name_col = col
-                break
-                
-        if not value_col or not name_col:
-            return
-            
-        portfolio_df = df[[name_col, value_col]].copy()
-        portfolio_df = portfolio_df[portfolio_df[value_col] > 0]
-        
-        if portfolio_df.empty:
-            return
-            
-        fig = px.pie(
-            portfolio_df, 
-            values=value_col, 
-            names=name_col, 
-            title=f'{broker_name} 資產配置 (按市值)', 
-            hole=0.4,
-            color_discrete_sequence=px.colors.sequential.Plasma_r
-        )
-        fig.update_traces(textinfo='percent+label', pull=[0.1]*len(portfolio_df))
-        fig.update_layout(height=400)
-        st.plotly_chart(fig, use_container_width=True)
-    except Exception:
-        pass  # 靜默處理錯誤,避免影響主要流程
-
-def render_trend_chart(trend_df):
-    """渲染趨勢圖表 - 優化版本"""
-    if trend_df.empty:
-        st.info("查無資產趨勢數據。")
-        return
-        
-    try:
-        required_columns = ['日期', '總市值']
-        if not all(col in trend_df.columns for col in required_columns):
-            return
-        
-        trend_df = trend_df.copy()
-        
-        # 簡化日期處理
-        trend_df['日期'] = pd.to_datetime(trend_df['日期'], errors='coerce')
-        trend_df = trend_df.dropna(subset=['日期'])
-        
-        if trend_df.empty:
-            return
-        
-        trend_df['總市值'] = trend_df['總市值'].apply(parse_number)
-        trend_df = trend_df[trend_df['總市值'] > 0]
-        
-        if trend_df.empty:
-            return
-        
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=trend_df['日期'], 
-            y=trend_df['總市值'], 
-            mode='lines+markers', 
-            name='總市值',
-            line=dict(color='#3498db', width=2),
-            marker=dict(size=6, color='#3498db')
-        ))
-        fig.update_layout(
-            title='資產趨勢', 
-            xaxis_title='日期', 
-            yaxis_title='總市值 (NT$)',
-            hovermode='x unified', 
-            template="plotly_white",
-            height=400
-        )
-        st.plotly_chart(fig, use_container_width=True)
-        
-    except Exception:
-        st.warning("資產趨勢圖載入失敗")
-
-# 優化9: 主函數流程優化
-def main():
-    """主要應用程式邏輯 - 優化版本"""
-    
-    st.markdown('<div class="hero-section"><h1 class="hero-title">📈 投資儀表板</h1><p class="hero-subtitle">快速掌握個人資產概況與趨勢</p></div>', unsafe_allow_html=True)
-    
-    person = render_user_selection()
-    
-    # 優化:只在需要時顯示更新按鈕
-    col1, col2, col3 = st.columns([1, 1, 8])
-    with col2:
-        if st.button('🔄 更新', key='refresh_button', help='清除快取並重新載入數據'):
-            st.cache_data.clear()
-            st.rerun()
-
-    # 優化:條件式載入,只載入當前用戶的數據
-    if person == 'asset_allocation':
-        st.header("📊 整體資產配置分析")
-        
-        with st.spinner('正在計算資產配置...'):
-            allocation_data, total_value, usd_twd_rate = get_asset_allocation_data()
-        
-        if total_value > 0:
-            categories, target_percentages, actual_percentages, differences = render_asset_allocation_summary(
-                allocation_data, total_value, usd_twd_rate
-            )
-            
-            st.markdown("---")
-            render_allocation_charts(categories, target_percentages, actual_percentages, differences)
-            
-            # 建議調整
-            st.markdown("### 配置建議")
-            suggestions = []
-            for i, (cat, diff) in enumerate(zip(categories, differences)):
-                if abs(diff) > 2:
-                    if diff > 0:
-                        suggestions.append(f"• **{cat}** 目前超過配置建議 {diff:.1f}%,建議減少投入")
-                    else:
-                        suggestions.append(f"• **{cat}** 目前低於配置建議 {abs(diff):.1f}%,建議增加投入")
-            
-            if suggestions:
-                for suggestion in suggestions:
-                    st.markdown(suggestion)
-            else:
-                st.success("🎉 目前配置與目標相當接近,維持現狀即可!")
-        else:
-            st.warning("無法取得資產配置數據,請檢查數據來源。")
-
-    elif person == 'ed_overseas':
-        st.header("Ed 海外投資總覽")
-        
-        # 優化:使用批次載入
-        with st.spinner('載入海外投資數據...'):
-            ed_overseas_data = load_person_all_data('ed_overseas')
-        
-        schwab_df = ed_overseas_data['schwab']
-        cathay_df = ed_overseas_data['cathay']
-        fubon_df = ed_overseas_data['fubon_uk']
-
-        schwab_total_usd = get_schwab_total_value(schwab_df)
-        cathay_total_usd = get_cathay_total_value(cathay_df)
-        fubon_total_usd, fubon_total_ntd = get_fubon_uk_total_value(fubon_df)
-        
-        render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_usd, fubon_total_ntd)
-        
-        tab1, tab2, tab3, tab4 = st.tabs(["🇺🇸 嘉信證券", "🇹🇼 國泰證券", "🇬🇧 富邦英股", "📊 綜合分析"])
-        
-        with tab1:
-            st.subheader("嘉信證券 - 美股個股")
-            
-            # 新增寫入功能區塊
-            with st.form("schwab_append_form", clear_on_submit=True):
-                st.write("##### ✏️ 新增一筆市值紀錄")
-                c1, c2, c3 = st.columns([1, 1, 2])
-                with c1:
-                    record_date = st.date_input("紀錄日期", value=datetime.now())
-                with c2:
-                    market_value = st.number_input("總市值 (USD)", min_value=0.0, format="%.2f")
-                with c3:
-                    st.write("")
-                    st.write("")
-                    submitted = st.form_submit_button("新增至 Google Sheet")
-
-            if submitted:
-                sheet_id = SHEET_CONFIGS['ed_overseas']['schwab']['id']
-                worksheet_name = 'schwab'
-                date_str = record_date.strftime('%Y/%m/%d')
-                values_to_append = [[date_str, market_value]]
-                
-                success = append_to_sheet(sheet_id, worksheet_name, values_to_append)
+                with st.spinner('正在儲存筆記...'):
+                    success = save_note(person, note_content.strip())
                 
                 if success:
-                    st.success("紀錄已成功新增!正在重新整理數據...")
-                    time.sleep(1)
-                    st.cache_data.clear()
-                    st.rerun()
-                else:
-                    st.error("新增紀錄失敗,請檢查後台日誌或 API 權限。")
-            
-            st.divider()
-
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                render_overseas_portfolio_chart(schwab_df, "嘉信證券")
-                st.markdown('</div>', unsafe_allow_html=True)
-            with col2:
-                render_overseas_holdings_table(schwab_df, "嘉信證券")
-
-        with tab2:
-            st.subheader("國泰證券 - 美股ETF")
-            
-            # 顯示定期定額設定
-            cathay_dca_df = ed_overseas_data.get('cathay_dca', pd.DataFrame())
-            if not cathay_dca_df.empty:
-                st.markdown("### 💰 定期定額投資計畫")
-                render_cathay_dca_card(cathay_dca_df)
-                st.divider()
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                render_overseas_portfolio_chart(cathay_df, "國泰證券")
-                st.markdown('</div>', unsafe_allow_html=True)
-            with col2:
-                render_overseas_holdings_table(cathay_df, "國泰證券")
-        
-        with tab3:
-            st.subheader("富邦證券 - 英股投資")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                render_overseas_portfolio_chart(fubon_df, "富邦英股")
-                st.markdown('</div>', unsafe_allow_html=True)
-            with col2:
-                render_overseas_holdings_table(fubon_df, "富邦英股")
-        
-        with tab4:
-            st.subheader("綜合投資分析")
-            platforms = ['嘉信證券', '國泰證券', '富邦英股']
-            values = [schwab_total_usd, cathay_total_usd, fubon_total_usd]
-            
-            fig = px.bar(
-                x=platforms, y=values, title='各平台投資總值比較 (USD)',
-                color=platforms, color_discrete_sequence=['#1f4e79', '#8b0000', '#2d3436']
-            )
-            fig.update_layout(showlegend=False, yaxis_title='總市值 (USD)', height=400)
-            st.plotly_chart(fig, use_container_width=True)
-            
-    else:
-        st.header(f"{person.capitalize()} 台股投資總覽")
-        
-        # 優化:使用批次載入
-        with st.spinner(f'載入 {person} 的投資數據...'):
-            person_data = load_person_all_data(person)
-        
-        holdings_df = person_data['holdings']
-        dca_df = person_data['dca']
-        trend_df = person_data['trend']
-
-        if not holdings_df.empty:
-            render_summary_cards(person, holdings_df, dca_df)
-            
-            # 為 Rita 和 Ed 新增交易記錄功能
-            if person in ['rita', 'ed']:
-                st.markdown("---")
-                st.header("📝 交易記錄管理")
-                render_trading_form_for_person(person)
-                st.markdown("---")
-            
-            tab1, tab2, tab3 = st.tabs(["📈 持股明細", "🥧 持股分佈", "📊 資產趨勢"])
-            
-            with tab1:
-                st.subheader("持股明細")
-                render_holdings_table(holdings_df, person)
-            with tab2:
-                st.subheader("持股分佈")
-                render_portfolio_chart(holdings_df, person)
-            with tab3:
-                st.subheader("資產趨勢")
-                render_trend_chart(trend_df)
-        else:
-            st.warning(f"無法載入 {person} 的投資數據,或數據為空。")
-
-if __name__ == "__main__":
-    main()
+                    st.success("✅ 筆記已成功儲存!")
