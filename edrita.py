@@ -1,54 +1,694 @@
-if submitted:
-            if not note_content or note_content.strip() == "":
-                st.error("❌ 筆記內容不能為空!")
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import numpy as np
+from datetime import datetime
+import json
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+import re
+import time
+import yfinance as yf
+import twstock  # 新增 twstock 匯入
+
+# 頁面配置
+st.set_page_config(
+    page_title="投資總覽",
+    page_icon="📈",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# 精簡版CSS樣式 - 移除未使用的動畫和複雜效果
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    * { font-family: 'Inter', sans-serif; }
+    .main > div { padding-top: 1rem; }
+    .css-1d391kg { display: none; }
+    
+    /* 簡化主標題區域 */
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+    }
+    
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.1rem;
+        margin: 1rem 0 0 0;
+        opacity: 0.9;
+    }
+    
+    /* 簡化用戶選擇按鈕 */
+    .user-selection-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin: 1.5rem 0;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+    }
+    
+    .user-btn {
+        background: linear-gradient(135deg, #ffffff, #f8f9fa);
+        color: #2c3e50;
+        border: 2px solid rgba(52, 152, 219, 0.2);
+        border-radius: 12px;
+        padding: 16px 24px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 130px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+    
+    .user-btn:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.2);
+        border-color: #3498db;
+    }
+    
+    .user-btn.active {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border-color: #3498db;
+    }
+    
+    /* 簡化標籤頁 */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 6px;
+        background: rgba(248, 249, 250, 0.8);
+        padding: 6px;
+        border-radius: 10px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        border-radius: 6px;
+        padding: 12px 24px;
+        color: #6c757d;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        border: none;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #3498db, #2980b9) !important;
+        color: white !important;
+    }
+    
+    /* 簡化指標卡片 */
+    .metric-card {
+        background: linear-gradient(135deg, #ffffff, #f8f9fa);
+        border: 1px solid rgba(0,0,0,0.05);
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+        text-align: center;
+        margin-bottom: 1rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #3498db, #9b59b6, #e74c3c, #f39c12);
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .metric-value {
+        font-size: 2.2rem;
+        font-weight: 700;
+        margin: 0.8rem 0;
+        color: #2c3e50;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+        font-weight: 500;
+        margin-bottom: 0.3rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    
+    .metric-change {
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 16px;
+        display: inline-block;
+    }
+    
+    .profit { color: #27ae60; background: rgba(39, 174, 96, 0.1); }
+    .loss { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
+    
+    /* 簡化專用卡片 */
+    .dca-card, .schwab-card, .cathay-card, .fubon-card, .allocation-card {
+        color: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+    }
+    
+    .dca-card { background: linear-gradient(135deg, #f39c12, #e67e22); }
+    .schwab-card { background: linear-gradient(135deg, #1f4e79, #2e6da4); }
+    .cathay-card { background: linear-gradient(135deg, #8b0000, #dc143c); }
+    .fubon-card { background: linear-gradient(135deg, #2d3436, #636e72); }
+    .allocation-card { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
+    
+    .dca-item {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+    }
+    
+    /* 圖表容器 */
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+        margin-bottom: 1.5rem;
+    }
+    
+    /* 按鈕樣式 */
+    .stButton > button {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.4rem 1.2rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-1px);
+    }
+    
+    /* 新增交易功能樣式 */
+    .trading-form-container {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border: 2px solid rgba(52, 152, 219, 0.2);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .trading-form-title {
+        color: #2c3e50;
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        text-align: center;
+    }
+    
+    /* 響應式 */
+    @media (max-width: 768px) {
+        .hero-title { font-size: 1.8rem; }
+        .hero-section { padding: 1.5rem 1rem; }
+        .metric-card { padding: 1.2rem; }
+        .user-btn { min-width: 180px; }
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Google Sheets 配置
+SHEET_CONFIGS = {
+    'jason': {
+        'id': '17qQIU4KMtbTpo_ozguuzKFHf1HHOhuEBanXxCyE8k4M',
+        'holdings_range': '總覽與損益!A:I',
+        'dca_range': '投資設定!A:E',
+        'trend_range': '資產趨勢!A:B'
+    },
+    'rita': {
+        'id': '1ekCpufAJfrzt1cCLsubqLDUMU98_Ol5hTptOV7uXgpw',
+        'holdings_range': '總覽與損益!A:I', 
+        'dca_range': '投資設定!A:E',
+        'trend_range': '資產趨勢!A:B',
+        'trading_records_range': '交易紀錄!A:G'  # 新增交易紀錄範圍
+    },
+    'ed': {
+        'id': '1oyG9eKrq57HMBjTWtg4tmKzHQiqc7r-2CWYyhA9ZHNc',
+        'holdings_range': '總覽與損益!A:I', 
+        'dca_range': '投資設定!A:E',
+        'trend_range': '資產趨勢!A:B'
+    },
+    'ed_overseas': {
+        'schwab': {
+            'id': '103Q3rZqZihu70jL3fHbVtU0hbFmzXb4n2708awhKiG0',
+            'range': 'schwab!A:Z'
+        },
+        'cathay': {
+            'id': '103Q3rZqZihu70jL3fHbVtU0hbFmzXb4n2708awhKiG0',
+            'range': '總覽與損益!A:Z',
+            'dca_range': '投資設定!A:E'
+        },
+        'fubon_uk': {
+            'id': '1WlUslUTcXR-eVK-RdQAHv5Qqyg35xIyHqZgejYYvTIA',
+            'range': '總覽與損益!A:M'
+        }
+    }
+}
+
+# 目標配置設定
+TARGET_ALLOCATION = {
+    '美股ETF': 40,
+    '美股個股': 25,
+    '台股ETF': 20,
+    '台股個股': 15,
+    '美債ETF': 0,
+    '黃金ETF': 0
+}
+
+# 優化1: 擴展快取設置
+@st.cache_resource(ttl=3600)
+def get_google_sheets_service():
+    """取得Google Sheets服務實例"""
+    try:
+        if "gcp_service_account" in st.secrets:
+            credentials_info = dict(st.secrets["gcp_service_account"])
+            credentials = Credentials.from_service_account_info(credentials_info)
+        else:
+            st.error("找不到 gcp_service_account 設定在 Streamlit secrets 中")
+            return None
+        
+        scoped_credentials = credentials.with_scopes([
+            'https://www.googleapis.com/auth/spreadsheets'
+        ])
+        
+        return build('sheets', 'v4', credentials=scoped_credentials)
+    except Exception as e:
+        st.error(f"Google Sheets API 設置失敗: {e}")
+        return None
+
+# 優化2: 延長匯率快取時間到4小時
+@st.cache_data(ttl=14400)
+def get_usd_twd_rate():
+    """取得USDTWD 匯率 - 延長快取時間"""
+    try:
+        ticker = yf.Ticker("USDTWD=X")
+        data = ticker.history(period="1d")
+        if not data.empty:
+            return data['Close'].iloc[-1]
+        else:
+            return 31.0
+    except Exception as e:
+        # 使用備用靜態匯率,減少API依賴
+        return 31.0
+
+# 優化3: 為常用函數添加快取
+@st.cache_data
+def parse_number(value):
+    """解析數字,處理各種格式 - 加入快取"""
+    if pd.isna(value) or value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    if not value or value == '':
+        return 0.0
+    
+    cleaned = str(value).replace(',', '').replace('%', '').replace('"', '').replace('$', '').strip()
+    
+    if not cleaned:
+        return 0.0
+        
+    try:
+        return float(cleaned)
+    except (ValueError, TypeError):
+        return 0.0
+
+def append_to_sheet(spreadsheet_id, range_name, values):
+    """將一列資料附加到指定的 Google Sheet 中。"""
+    try:
+        service = get_google_sheets_service()
+        if not service:
+            st.error("無法連接至 Google Sheets 服務。")
+            return False
+
+        body = {
+            'values': values
+        }
+        result = service.spreadsheets().values().append(
+            spreadsheetId=spreadsheet_id,
+            range=range_name,
+            valueInputOption='USER_ENTERED',
+            insertDataOption='INSERT_ROWS',
+            body=body
+        ).execute()
+        return True
+    except Exception as e:
+        st.error(f"寫入 Google Sheets 失敗: {e}")
+        return False
+
+# 新增:取得股票名稱的函數
+@st.cache_data(ttl=3600)
+def get_stock_name(stock_code):
+    """使用 twstock 取得股票名稱"""
+    try:
+        realtime_data = twstock.realtime.get(stock_code)
+        if realtime_data and realtime_data.get('success', False):
+            return realtime_data['info']['name']
+        else:
+            return f"股票{stock_code}"
+    except Exception as e:
+        st.warning(f"無法取得股票 {stock_code} 的名稱: {e}")
+        return f"股票{stock_code}"
+
+# 新增:獲取下一行號的輔助函數
+def get_next_row_number(sheet_id, range_name):
+    """獲取工作表的下一行號"""
+    try:
+        service = get_google_sheets_service()
+        if not service:
+            return None
+        
+        result = service.spreadsheets().values().get(
+            spreadsheetId=sheet_id,
+            range=range_name
+        ).execute()
+        
+        values = result.get('values', [])
+        return len(values) + 1  # +1 因為要寫入下一行
+        
+    except Exception as e:
+        st.error(f"獲取行號失敗: {e}")
+        return None
+
+# 新增:交易記錄處理函數
+def process_trading_record(person, stock_code, stock_price, stock_quantity, transaction_type, holding_type, transaction_date):
+    """處理交易記錄邏輯"""
+    try:
+        sheet_id = SHEET_CONFIGS[person]['id']
+        
+        # 計算總金額和股數(根據交易類型調整符號)
+        if transaction_type == "買進":
+            total_amount = stock_price * stock_quantity
+            final_quantity = stock_quantity
+        else:  # 賣出
+            total_amount = stock_price * stock_quantity * (-1)
+            final_quantity = stock_quantity * (-1)
+        
+        # 準備寫入交易紀錄的資料
+        trading_record_values = [[
+            transaction_date.strftime('%Y/%m/%d'),  # Column A: 交易日期
+            stock_code,                             # Column B: 股票代號
+            stock_price,                           # Column C: 買入股價
+            '',                                    # Column D: 留空
+            '',                                    # Column E: 留空
+            total_amount,                          # Column F: 計算金額
+            final_quantity                         # Column G: 股數
+        ]]
+        
+        # 寫入交易紀錄
+        success = append_to_sheet(sheet_id, '交易紀錄', trading_record_values)
+        
+        if not success:
+            return False
+        
+        # 如果是「新持有」且「買進」,則額外寫入總覽與損益
+        if holding_type == "新持有" and transaction_type == "買進":
+            stock_name = get_stock_name(stock_code)
+            
+            # 獲取將要寫入的行號
+            next_row = get_next_row_number(sheet_id, '總覽與損益!A:A')
+            if next_row is None:
+                next_row = 2  # 如果無法獲取,假設從第2行開始(第1行是標題)
+            
+            # 準備包含所有公式的資料
+            holdings_values = [[
+                stock_code,    # Column A: 股票代號
+                stock_name,    # Column B: 股票名稱
+                f'=IF(ISBLANK(A{next_row}), "", SUMIF(\'交易紀錄\'!B:B, A{next_row}, \'交易紀錄\'!F:F))',  # Column C: 總投入成本
+                f'=IF(ISBLANK(A{next_row}), "", SUMIF(\'交易紀錄\'!B:B, A{next_row}, \'交易紀錄\'!G:G))',  # Column D: 總持有股數
+                f'=IF(ISBLANK(A{next_row}), "", GOOGLEFINANCE("TPE:" & A{next_row}, "price"))',          # Column E: 目前股價
+                f'=IF(ISBLANK(A{next_row}), "", D{next_row}*E{next_row})',                               # Column F: 目前總市值
+                f'=IF(ISBLANK(A{next_row}), "", F{next_row}-C{next_row})',                               # Column G: 未實現損益
+                f'=IF(ISBLANK(A{next_row}), "", G{next_row}/C{next_row})'                                # Column H: 報酬率
+            ]]
+            
+            success = append_to_sheet(sheet_id, '總覽與損益', holdings_values)
+            
+        return success
+        
+    except Exception as e:
+        st.error(f"處理交易記錄時發生錯誤: {e}")
+        return False
+
+# 新增:交易表單渲染函數
+def render_trading_form_for_person(person):
+    """渲染交易記錄輸入表單"""
+    st.markdown('<div class="trading-form-container">', unsafe_allow_html=True)
+    st.markdown('<div class="trading-form-title">📝 新增交易記錄</div>', unsafe_allow_html=True)
+    
+    # 使用 session_state 來追蹤表單狀態,實現即時更新
+    if 'trading_form_data' not in st.session_state:
+        st.session_state.trading_form_data = {
+            'holding_type': '原本持有',
+            'transaction_type': '買進',
+            'stock_code': '',
+            'stock_price': 100.0,
+            'stock_quantity': 1000
+        }
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.write("**持股狀態 (必選)**")
+        holding_type = st.radio(
+            "",
+            ["原本持有", "新持有"],
+            key="holding_type_radio",
+            horizontal=True,
+            index=0 if st.session_state.trading_form_data['holding_type'] == '原本持有' else 1
+        )
+        st.session_state.trading_form_data['holding_type'] = holding_type
+    
+    with col2:
+        st.write("**交易類型 (必選)**")
+        transaction_type = st.radio(
+            "",
+            ["買進", "賣出"],
+            key="transaction_type_radio",
+            horizontal=True,
+            index=0 if st.session_state.trading_form_data['transaction_type'] == '買進' else 1
+        )
+        # 當交易類型改變時,自動調整股數預設值
+        if transaction_type != st.session_state.trading_form_data['transaction_type']:
+            st.session_state.trading_form_data['transaction_type'] = transaction_type
+            st.session_state.trading_form_data['stock_quantity'] = 1000 if transaction_type == '買進' else 1000
+    
+    st.divider()
+    
+    col3, col4, col5, col6 = st.columns(4)
+    
+    with col3:
+        transaction_date = st.date_input(
+            "交易日期",
+            value=datetime.now(),
+            key="transaction_date_input"
+        )
+    
+    with col4:
+        stock_code = st.text_input(
+            "股票代號",
+            placeholder="例如: 2330",
+            key="stock_code_input",
+            value=st.session_state.trading_form_data['stock_code']
+        )
+        st.session_state.trading_form_data['stock_code'] = stock_code
+    
+    with col5:
+        stock_price = st.number_input(
+            "股價",
+            min_value=0.01,
+            value=st.session_state.trading_form_data['stock_price'],
+            step=0.01,
+            format="%.2f",
+            key="stock_price_input"
+        )
+        st.session_state.trading_form_data['stock_price'] = stock_price
+    
+    with col6:
+        stock_quantity = st.number_input(
+            "股數",
+            value=st.session_state.trading_form_data['stock_quantity'],
+            step=1000,
+            min_value=1,
+            key="stock_quantity_input"
+        )
+        st.session_state.trading_form_data['stock_quantity'] = stock_quantity
+    
+    st.divider()
+    
+    # 即時計算預覽 - 現在會根據輸入值即時更新
+    if transaction_type == "買進":
+        total_amount = stock_price * stock_quantity
+        final_quantity = stock_quantity
+    else:
+        total_amount = stock_price * stock_quantity * (-1)
+        final_quantity = stock_quantity * (-1)
+    
+    col7, col8, col9 = st.columns(3)
+    with col7:
+        st.info(f"**交易金額:** NT${total_amount:,.0f}")
+    with col8:
+        st.info(f"**最終股數:** {final_quantity:,}")
+    with col9:
+        if holding_type == "新持有" and transaction_type == "買進":
+            st.success("**將同時新增至持股清單**")
+        else:
+            st.info("**僅記錄交易**")
+    
+    st.divider()
+    
+    # 改用普通按鈕而非 form_submit_button 來確保功能正常
+    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
+    with col_btn2:
+        if st.button(
+            "✅ 確定",
+            use_container_width=True,
+            type="primary",
+            key="submit_trading_record"
+        ):
+            if not stock_code:
+                st.error("請輸入股票代號!")
+            elif stock_quantity <= 0:
+                st.error("股數必須大於零!")
             else:
-                with st.spinner('正在儲存筆記...'):
-                    success = save_note(person, note_content.strip())
+                with st.spinner('正在處理交易記錄...'):
+                    success = process_trading_record(
+                        person=person,
+                        stock_code=stock_code,
+                        stock_price=stock_price,
+                        stock_quantity=stock_quantity,
+                        transaction_type=transaction_type,
+                        holding_type=holding_type,
+                        transaction_date=transaction_date
+                    )
                 
                 if success:
-                    st.success("✅ 筆記已成功儲存!")
+                    st.success("✅ 交易記錄已成功新增!")
+                    if holding_type == "新持有" and transaction_type == "買進":
+                        st.success(f"✅ 股票 {stock_code} 已新增至持股清單!")
+                    
+                    # 重置表單數據
+                    st.session_state.trading_form_data = {
+                        'holding_type': '原本持有',
+                        'transaction_type': '買進',
+                        'stock_code': '',
+                        'stock_price': 100.0,
+                        'stock_quantity': 1000
+                    }
+                    
+                    # 清除快取並重新載入
                     time.sleep(1)
                     st.cache_data.clear()
                     st.rerun()
                 else:
-                    st.error("❌ 筆記儲存失敗，請稍後再試。")
-    
-    st.divider()
-    
-    st.write("##### 📚 歷史筆記")
-    
-    if notes_df.empty:
-        st.info("還沒有任何筆記，開始記錄你的投資歷程吧！")
-    else:
-        if '日期' in notes_df.columns:
-            notes_df_sorted = notes_df.sort_values('日期', ascending=False)
-        else:
-            notes_df_sorted = notes_df
-        
-        st.caption(f"共 {len(notes_df_sorted)} 則筆記")
-        
-        for idx, row in notes_df_sorted.iterrows():
-            note_date = row.get('日期', 'N/A')
-            note_content = row.get('筆記內容', '')
-            
-            if pd.notna(note_date):
-                try:
-                    formatted_date = pd.to_datetime(note_date).strftime('%Y-%m-%d %H:%M')
-                except:
-                    formatted_date = str(note_date)
-            else:
-                formatted_date = '未知日期'
-            
-            st.markdown(
-                f'<div class="note-item">'
-                f'<div class="note-date">📅 {formatted_date}</div>'
-                f'<div class="note-content">{note_content}</div>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
+                    st.error("❌ 交易記錄新增失敗,請檢查網路連線或權限設定。")
     
     st.markdown('</div>', unsafe_allow_html=True)
 
+# 優化4: 延長數據快取時間到30分鐘
+@st.cache_data(ttl=1800)
+def load_sheet_data(person, data_type, broker=None):
+    """從Google Sheets載入數據 - 延長快取時間"""
+    service = get_google_sheets_service()
+    if not service:
+        return pd.DataFrame()
+    
+    try:
+        if person == 'ed_overseas':
+            config = SHEET_CONFIGS[person][broker]
+            sheet_id = config['id']
+            range_name = config['range']
+        else:
+            config = SHEET_CONFIGS[person]
+            sheet_id = config['id']
+            
+            if data_type == 'holdings':
+                range_name = config['holdings_range']
+            elif data_type == 'dca':
+                range_name = config.get('dca_range')
+            elif data_type == 'trend':
+                range_name = config.get('trend_range')
+            else:
+                return pd.DataFrame()
+        
+        if not range_name:
+            return pd.DataFrame()
+        
+        result = service.spreadsheets().values().get(
+            spreadsheetId=sheet_id,
+            range=range_name
+        ).execute()
+        
+        values = result.get('values', [])
+        if not values or len(values) < 2:
+            return pd.DataFrame()
+        
+        # 簡化數據處理邏輯
+        max_cols = len(values[0]) if values else 0
+        normalized_values = [row + [''] * (max_cols - len(row)) for row in values]
+        
+        df = pd.DataFrame(normalized_values[1:], columns=normalized_values[0])
+        df = df.dropna(how='all')
+        
+        # 簡化數字欄位處理
+        if person == 'ed_overseas':
+            numeric_columns = [col for col in df.columns if any(keyword in col for keyword in ['價', '成本', '市值', '損益', '股數', '率'])]
+        elif data_type == 'holdings':
+            numeric_columns = ['總投入成本', '總持有股數', '目前股價', '目前總市值', '未實現損益', '報酬率']
+        elif data_type == 'dca':
+            numeric_columns = ['每月投入金額', '扣款日', '券商折扣']
+        elif data_type == 'trend':
+            numeric_columns = ['總市值']
+        else:
+            numeric_columns = []
+        
+        for col in numeric_columns:
+            if col in df.columns:
+                df[col] = df[col].apply(parse_number)
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"載入{person} {broker or data_type}數據失敗: {str(e)}")
+        return pd.DataFrame()
+
+# 優化5: 批次載入相關數據
 @st.cache_data(ttl=1800)
 def load_person_all_data(person):
     """批次載入單一用戶的所有數據"""
@@ -63,8 +703,7 @@ def load_person_all_data(person):
         return {
             'holdings': load_sheet_data(person, 'holdings'),
             'dca': load_sheet_data(person, 'dca'),
-            'trend': load_sheet_data(person, 'trend'),
-            'notes': load_notes_data(person)
+            'trend': load_sheet_data(person, 'trend')
         }
 
 @st.cache_data(ttl=1800)
@@ -97,6 +736,7 @@ def load_cathay_dca_data():
         df = pd.DataFrame(normalized_values[1:], columns=normalized_values[0])
         df = df.dropna(how='all')
         
+        # 處理數字欄位 - 使用更靈活的欄位匹配
         numeric_columns = []
         for col in df.columns:
             if any(keyword in col for keyword in ['金額', '扣款', '折扣', '價']):
@@ -176,17 +816,20 @@ def get_fubon_uk_total_value(fubon_df):
         st.error(f"計算富邦英股總市值失敗: {e}")
         return 0.0, 0.0
 
+# 優化6: 快取資產配置計算
 @st.cache_data(ttl=1800)
 def get_asset_allocation_data():
-    """計算資產配置數據"""
+    """計算資產配置數據 - 添加快取"""
     try:
         usd_twd_rate = get_usd_twd_rate()
         allocation_data = {category: {'value_twd': 0.0, 'percentage': 0.0} for category in TARGET_ALLOCATION.keys()}
         
+        # 批次載入所有需要的數據
         rita_data = load_person_all_data('rita')
         ed_data = load_person_all_data('ed')
         ed_overseas_data = load_person_all_data('ed_overseas')
         
+        # 處理台股數據
         for person_data in [rita_data, ed_data]:
             holdings_df = person_data.get('holdings', pd.DataFrame())
             if not holdings_df.empty and '類別' in holdings_df.columns and '目前總市值' in holdings_df.columns:
@@ -196,20 +839,23 @@ def get_asset_allocation_data():
                         value_twd = parse_number(row.get('目前總市值', 0))
                         allocation_data[category]['value_twd'] += value_twd
         
+        # 處理海外投資
         schwab_total_usd = get_schwab_total_value(ed_overseas_data.get('schwab', pd.DataFrame()))
         if schwab_total_usd > 0:
             allocation_data['美股個股']['value_twd'] += schwab_total_usd * usd_twd_rate
         
+        # 國泰證券處理
         cathay_df = ed_overseas_data.get('cathay', pd.DataFrame())
         if not cathay_df.empty and len(cathay_df.columns) >= 9:
             for _, row in cathay_df.iterrows():
                 if len(row) > 8:
-                    category = str(row.iloc[8]).strip() if pd.notna(row.iloc[8]) else ''
+                    category = str(row.iloc[8]).strip() if pd.notna(row.iloc[8]) else ''  # 從第9欄（索引8，即I欄）讀取類別
                     if category in allocation_data and len(row) > 5:
                         value_usd = parse_number(row.iloc[5])
                         if value_usd > 0:
                             allocation_data[category]['value_twd'] += value_usd * usd_twd_rate
         
+        # 富邦英股處理
         fubon_df = ed_overseas_data.get('fubon_uk', pd.DataFrame())
         if not fubon_df.empty and len(fubon_df.columns) >= 13:
             value_usd_col_idx = None
@@ -227,6 +873,7 @@ def get_asset_allocation_data():
                             if value_usd > 0:
                                 allocation_data[category]['value_twd'] += value_usd * usd_twd_rate
         
+        # 計算百分比
         total_value = sum([data['value_twd'] for data in allocation_data.values()])
         
         if total_value > 0:
@@ -239,9 +886,10 @@ def get_asset_allocation_data():
         st.error(f"計算資產配置失敗: {e}")
         return {}, 0.0, 31.0
 
+# 優化7: 快取格式化函數
 @st.cache_data
 def format_currency(amount, currency='TWD', show_prefix=True):
-    """格式化貨幣"""
+    """格式化貨幣 - 添加快取"""
     if currency == 'USD':
         return f"${amount:,.2f}"
     else:
@@ -252,7 +900,7 @@ def format_currency(amount, currency='TWD', show_prefix=True):
 
 @st.cache_data
 def format_percentage(value):
-    """格式化百分比"""
+    """格式化百分比 - 添加快取"""
     return f"{'+' if value > 0 else ''}{value:.2f}%"
 
 def render_user_selection():
@@ -284,7 +932,7 @@ def render_user_selection():
     return st.session_state.selected_person
 
 def render_summary_cards(person, holdings_df, dca_df=None):
-    """渲染摘要卡片"""
+    """渲染摘要卡片 - 簡化錯誤處理"""
     if person in ['ed_overseas', 'asset_allocation']:
         return
     
@@ -314,6 +962,7 @@ def render_summary_cards(person, holdings_df, dca_df=None):
         with col4:
             if dca_df is not None and not dca_df.empty and all(col in dca_df.columns for col in ['股票代號', '股票名稱', '每月投入金額', '扣款日']):
                 with st.container():
+                    # 計算每月總投入金額
                     total_monthly = 0
                     st.markdown('<div class="dca-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div>', unsafe_allow_html=True)
                     for _, row in dca_df.iterrows():
@@ -322,6 +971,7 @@ def render_summary_cards(person, holdings_df, dca_df=None):
                             total_monthly += monthly_amount
                             deduction_day = int(parse_number(row.get('扣款日', 0)))
                             st.markdown(f'<div class="dca-item"><strong>{row["股票代號"]} {row["股票名稱"]}</strong><br><small>每月{format_currency(monthly_amount)} | {deduction_day}號扣款</small></div>', unsafe_allow_html=True)
+                    # 顯示每月總計
                     st.markdown(f'<div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid rgba(255,255,255,0.3); font-weight: 700; font-size: 1.1rem;">每月總計: {format_currency(total_monthly)}</div></div>', unsafe_allow_html=True)
             else:
                 st.markdown('<div class="dca-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div><div style="opacity: 0.8;">暫無設定資料</div></div>', unsafe_allow_html=True)
@@ -335,6 +985,7 @@ def render_cathay_dca_card(dca_df):
         st.markdown('<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div><div style="opacity: 0.8;">暫無設定資料</div></div>', unsafe_allow_html=True)
         return
     
+    # 更靈活的欄位檢查 - 尋找包含關鍵字的欄位
     stock_code_col = None
     stock_name_col = None
     amount_col = None
@@ -350,12 +1001,14 @@ def render_cathay_dca_card(dca_df):
         elif '扣款' in col or '日期' in col or 'day' in col.lower():
             day_col = col
     
+    # 如果找不到必要欄位，顯示除錯資訊
     if not all([stock_code_col, stock_name_col, amount_col, day_col]):
         st.markdown('<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">定期定額設定</div>', unsafe_allow_html=True)
         st.markdown(f'<div style="opacity: 0.8;">找到的欄位: {list(dca_df.columns)}</div>', unsafe_allow_html=True)
         st.markdown(f'<div style="opacity: 0.8; font-size: 0.8rem;">代號欄:{stock_code_col} | 名稱欄:{stock_name_col} | 金額欄:{amount_col} | 扣款欄:{day_col}</div></div>', unsafe_allow_html=True)
         return
     
+    # 計算每月總投入金額
     total_monthly = 0
     st.markdown('<div class="cathay-card"><div style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">🇹🇼 定期定額設定</div>', unsafe_allow_html=True)
     
@@ -366,6 +1019,7 @@ def render_cathay_dca_card(dca_df):
             deduction_day = int(parse_number(row.get(day_col, 0)))
             st.markdown(f'<div class="dca-item"><strong>{row[stock_code_col]} {row[stock_name_col]}</strong><br><small>每月{format_currency(monthly_amount, "USD")} | {deduction_day}號扣款</small></div>', unsafe_allow_html=True)
     
+    # 顯示每月總計
     st.markdown(f'<div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid rgba(255,255,255,0.3); font-weight: 700; font-size: 1.1rem;">每月總計: {format_currency(total_monthly, "USD")}</div></div>', unsafe_allow_html=True)
 
 def render_ed_overseas_summary(schwab_total_usd, cathay_total_usd, fubon_total_usd, fubon_total_ntd):
@@ -424,12 +1078,14 @@ def render_asset_allocation_summary(allocation_data, total_value, usd_twd_rate):
     
     return categories, target_percentages, actual_percentages, differences
 
+# 優化8: 延緩載入圖表組件
 def render_allocation_charts(categories, target_percentages, actual_percentages, differences):
-    """渲染資產配置圖表"""
+    """渲染資產配置圖表 - 優化版"""
     
     col1, col2 = st.columns(2)
     
     with col1:
+        # 使用 st.empty() 實現條件渲染
         chart_container1 = st.empty()
         with chart_container1.container():
             fig_comparison = go.Figure()
@@ -454,7 +1110,7 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
                 yaxis_title='配置比例(%)',
                 barmode='group',
                 template="plotly_white",
-                height=400
+                height=400  # 固定高度以提升渲染速度
             )
             
             st.plotly_chart(fig_comparison, use_container_width=True)
@@ -485,6 +1141,7 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
             
             st.plotly_chart(fig_diff, use_container_width=True)
     
+    # 餅狀圖比較 - 簡化版本
     col3, col4 = st.columns(2)
     
     with col3:
@@ -508,12 +1165,13 @@ def render_allocation_charts(categories, target_percentages, actual_percentages,
         st.plotly_chart(fig_actual_pie, use_container_width=True)
 
 def render_holdings_table(holdings_df, person):
-    """渲染持股表格"""
+    """渲染持股表格 - 添加數字格式化"""
     if holdings_df.empty:
         st.info("查無持股數據。")
         return
     
     if person != 'ed_overseas':
+        # 格式化數字欄位,添加千位分隔符
         format_dict = {}
         for col in holdings_df.columns:
             if col in ['目前股價']:
@@ -532,12 +1190,13 @@ def render_holdings_table(holdings_df, person):
             st.dataframe(holdings_df, use_container_width=True)
 
 def render_overseas_holdings_table(df, broker_name):
-    """渲染海外持股表格"""
+    """渲染海外持股表格 - 優化版本"""
     if df.empty:
         st.info(f"查無{broker_name}持股數據。")
         return
     
     if broker_name == "富邦英股":
+        # 只顯示必要欄位,減少處理時間
         essential_columns = [col for col in df.columns if any(keyword in col for keyword in ['股票代號', '股票名稱', '市值', '損益', '報酬率'])]
         display_df = df[essential_columns] if essential_columns else df
         st.dataframe(display_df, use_container_width=True)
@@ -545,7 +1204,7 @@ def render_overseas_holdings_table(df, broker_name):
         st.dataframe(df, use_container_width=True)
     
 def render_portfolio_chart(holdings_df, person):
-    """渲染投資組合圖表"""
+    """渲染投資組合圖表 - 優化版本"""
     if holdings_df.empty or person == 'ed_overseas': 
         return
         
@@ -565,13 +1224,13 @@ def render_portfolio_chart(holdings_df, person):
             color_discrete_sequence=px.colors.sequential.Agsunset
         )
         fig.update_traces(textinfo='percent+label', pull=[0.1]*len(portfolio_df))
-        fig.update_layout(height=400)
+        fig.update_layout(height=400)  # 固定高度
         st.plotly_chart(fig, use_container_width=True)
     except Exception as e:
         st.warning(f"圖表渲染失敗: {str(e)}")
 
 def render_overseas_portfolio_chart(df, broker_name):
-    """渲染海外投資組合圖表"""
+    """渲染海外投資組合圖表 - 優化版本"""
     if df.empty: 
         return
     try:
@@ -606,10 +1265,10 @@ def render_overseas_portfolio_chart(df, broker_name):
         fig.update_layout(height=400)
         st.plotly_chart(fig, use_container_width=True)
     except Exception:
-        pass
+        pass  # 靜默處理錯誤,避免影響主要流程
 
 def render_trend_chart(trend_df):
-    """渲染趨勢圖表"""
+    """渲染趨勢圖表 - 優化版本"""
     if trend_df.empty:
         st.info("查無資產趨勢數據。")
         return
@@ -621,6 +1280,7 @@ def render_trend_chart(trend_df):
         
         trend_df = trend_df.copy()
         
+        # 簡化日期處理
         trend_df['日期'] = pd.to_datetime(trend_df['日期'], errors='coerce')
         trend_df = trend_df.dropna(subset=['日期'])
         
@@ -655,19 +1315,22 @@ def render_trend_chart(trend_df):
     except Exception:
         st.warning("資產趨勢圖載入失敗")
 
+# 優化9: 主函數流程優化
 def main():
-    """主要應用程式邏輯"""
+    """主要應用程式邏輯 - 優化版本"""
     
     st.markdown('<div class="hero-section"><h1 class="hero-title">📈 投資儀表板</h1><p class="hero-subtitle">快速掌握個人資產概況與趨勢</p></div>', unsafe_allow_html=True)
     
     person = render_user_selection()
     
+    # 優化:只在需要時顯示更新按鈕
     col1, col2, col3 = st.columns([1, 1, 8])
     with col2:
         if st.button('🔄 更新', key='refresh_button', help='清除快取並重新載入數據'):
             st.cache_data.clear()
             st.rerun()
 
+    # 優化:條件式載入,只載入當前用戶的數據
     if person == 'asset_allocation':
         st.header("📊 整體資產配置分析")
         
@@ -682,6 +1345,7 @@ def main():
             st.markdown("---")
             render_allocation_charts(categories, target_percentages, actual_percentages, differences)
             
+            # 建議調整
             st.markdown("### 配置建議")
             suggestions = []
             for i, (cat, diff) in enumerate(zip(categories, differences)):
@@ -702,6 +1366,7 @@ def main():
     elif person == 'ed_overseas':
         st.header("Ed 海外投資總覽")
         
+        # 優化:使用批次載入
         with st.spinner('載入海外投資數據...'):
             ed_overseas_data = load_person_all_data('ed_overseas')
         
@@ -720,6 +1385,7 @@ def main():
         with tab1:
             st.subheader("嘉信證券 - 美股個股")
             
+            # 新增寫入功能區塊
             with st.form("schwab_append_form", clear_on_submit=True):
                 st.write("##### ✏️ 新增一筆市值紀錄")
                 c1, c2, c3 = st.columns([1, 1, 2])
@@ -761,6 +1427,7 @@ def main():
         with tab2:
             st.subheader("國泰證券 - 美股ETF")
             
+            # 顯示定期定額設定
             cathay_dca_df = ed_overseas_data.get('cathay_dca', pd.DataFrame())
             if not cathay_dca_df.empty:
                 st.markdown("### 💰 定期定額投資計畫")
@@ -800,24 +1467,25 @@ def main():
     else:
         st.header(f"{person.capitalize()} 台股投資總覽")
         
+        # 優化:使用批次載入
         with st.spinner(f'載入 {person} 的投資數據...'):
             person_data = load_person_all_data(person)
         
         holdings_df = person_data['holdings']
         dca_df = person_data['dca']
         trend_df = person_data['trend']
-        notes_df = person_data['notes']
 
         if not holdings_df.empty:
             render_summary_cards(person, holdings_df, dca_df)
             
+            # 為 Rita 和 Ed 新增交易記錄功能
             if person in ['rita', 'ed']:
                 st.markdown("---")
                 st.header("📝 交易記錄管理")
                 render_trading_form_for_person(person)
                 st.markdown("---")
             
-            tab1, tab2, tab3, tab4 = st.tabs(["📈 持股明細", "🥧 持股分佈", "📊 資產趨勢", "📝 投資筆記"])
+            tab1, tab2, tab3 = st.tabs(["📈 持股明細", "🥧 持股分佈", "📊 資產趨勢"])
             
             with tab1:
                 st.subheader("持股明細")
@@ -828,763 +1496,8 @@ def main():
             with tab3:
                 st.subheader("資產趨勢")
                 render_trend_chart(trend_df)
-            with tab4:
-                st.subheader("投資筆記")
-                render_notes_section(person, notes_df)
         else:
             st.warning(f"無法載入 {person} 的投資數據,或數據為空。")
 
 if __name__ == "__main__":
     main()
-import streamlit as st
-import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import numpy as np
-from datetime import datetime
-import json
-from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-import re
-import time
-import yfinance as yf
-import twstock
-
-# 頁面配置
-st.set_page_config(
-    page_title="投資總覽",
-    page_icon="📈",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# CSS樣式
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
-    * { font-family: 'Inter', sans-serif; }
-    .main > div { padding-top: 1rem; }
-    .css-1d391kg { display: none; }
-    
-    .hero-section {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 16px;
-        margin-bottom: 2rem;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
-    }
-    
-    .hero-title {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin: 0;
-    }
-    
-    .hero-subtitle {
-        font-size: 1.1rem;
-        margin: 1rem 0 0 0;
-        opacity: 0.9;
-    }
-    
-    .user-selection-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        justify-content: center;
-        margin: 1.5rem 0;
-        padding: 1.5rem;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 16px;
-    }
-    
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 6px;
-        background: rgba(248, 249, 250, 0.8);
-        padding: 6px;
-        border-radius: 10px;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        background: transparent;
-        border-radius: 6px;
-        padding: 12px 24px;
-        color: #6c757d;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        border: none;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #3498db, #2980b9) !important;
-        color: white !important;
-    }
-    
-    .metric-card {
-        background: linear-gradient(135deg, #ffffff, #f8f9fa);
-        border: 1px solid rgba(0,0,0,0.05);
-        padding: 1.5rem;
-        border-radius: 12px;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
-        text-align: center;
-        margin-bottom: 1rem;
-        transition: transform 0.2s ease;
-    }
-    
-    .metric-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, #3498db, #9b59b6, #e74c3c, #f39c12);
-    }
-    
-    .metric-card:hover {
-        transform: translateY(-2px);
-    }
-    
-    .metric-value {
-        font-size: 2.2rem;
-        font-weight: 700;
-        margin: 0.8rem 0;
-        color: #2c3e50;
-    }
-    
-    .metric-label {
-        font-size: 0.9rem;
-        color: #7f8c8d;
-        font-weight: 500;
-        margin-bottom: 0.3rem;
-        text-transform: uppercase;
-        letter-spacing: 0.3px;
-    }
-    
-    .metric-change {
-        font-size: 0.85rem;
-        font-weight: 600;
-        padding: 3px 10px;
-        border-radius: 16px;
-        display: inline-block;
-    }
-    
-    .profit { color: #27ae60; background: rgba(39, 174, 96, 0.1); }
-    .loss { color: #e74c3c; background: rgba(231, 76, 60, 0.1); }
-    
-    .dca-card, .schwab-card, .cathay-card, .fubon-card, .allocation-card {
-        color: white;
-        padding: 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 1rem;
-    }
-    
-    .dca-card { background: linear-gradient(135deg, #f39c12, #e67e22); }
-    .schwab-card { background: linear-gradient(135deg, #1f4e79, #2e6da4); }
-    .cathay-card { background: linear-gradient(135deg, #8b0000, #dc143c); }
-    .fubon-card { background: linear-gradient(135deg, #2d3436, #636e72); }
-    .allocation-card { background: linear-gradient(135deg, #6c5ce7, #a29bfe); }
-    
-    .dca-item {
-        background: rgba(255, 255, 255, 0.15);
-        border-radius: 8px;
-        padding: 12px;
-        margin-bottom: 8px;
-    }
-    
-    .chart-container {
-        background: white;
-        border-radius: 12px;
-        padding: 1rem;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
-        margin-bottom: 1.5rem;
-    }
-    
-    .stButton > button {
-        background: linear-gradient(135deg, #3498db, #2980b9);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.4rem 1.2rem;
-        font-weight: 600;
-        transition: all 0.2s ease;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-1px);
-    }
-    
-    .trading-form-container {
-        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-        border: 2px solid rgba(52, 152, 219, 0.2);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
-    .trading-form-title {
-        color: #2c3e50;
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        text-align: center;
-    }
-    
-    /* 筆記功能樣式 */
-    .notes-container {
-        background: linear-gradient(135deg, #fff5e6, #ffe8cc);
-        border: 2px solid rgba(243, 156, 18, 0.3);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
-    .notes-title {
-        color: #e67e22;
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        text-align: center;
-    }
-    
-    .note-item {
-        background: white;
-        border-left: 4px solid #f39c12;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 0.8rem;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        transition: transform 0.2s ease;
-    }
-    
-    .note-item:hover {
-        transform: translateX(5px);
-    }
-    
-    .note-date {
-        color: #7f8c8d;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-    
-    .note-content {
-        color: #2c3e50;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-    }
-    
-    @media (max-width: 768px) {
-        .hero-title { font-size: 1.8rem; }
-        .hero-section { padding: 1.5rem 1rem; }
-        .metric-card { padding: 1.2rem; }
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Google Sheets 配置
-SHEET_CONFIGS = {
-    'jason': {
-        'id': '17qQIU4KMtbTpo_ozguuzKFHf1HHOhuEBanXxCyE8k4M',
-        'holdings_range': '總覽與損益!A:I',
-        'dca_range': '投資設定!A:E',
-        'trend_range': '資產趨勢!A:B',
-        'notes_range': 'notes!A:B'
-    },
-    'rita': {
-        'id': '1ekCpufAJfrzt1cCLsubqLDUMU98_Ol5hTptOV7uXgpw',
-        'holdings_range': '總覽與損益!A:I', 
-        'dca_range': '投資設定!A:E',
-        'trend_range': '資產趨勢!A:B',
-        'trading_records_range': '交易紀錄!A:G',
-        'notes_range': 'notes!A:B'
-    },
-    'ed': {
-        'id': '1oyG9eKrq57HMBjTWtg4tmKzHQiqc7r-2CWYyhA9ZHNc',
-        'holdings_range': '總覽與損益!A:I', 
-        'dca_range': '投資設定!A:E',
-        'trend_range': '資產趨勢!A:B',
-        'notes_range': 'notes!A:B'
-    },
-    'ed_overseas': {
-        'schwab': {
-            'id': '103Q3rZqZihu70jL3fHbVtU0hbFmzXb4n2708awhKiG0',
-            'range': 'schwab!A:Z'
-        },
-        'cathay': {
-            'id': '103Q3rZqZihu70jL3fHbVtU0hbFmzXb4n2708awhKiG0',
-            'range': '總覽與損益!A:Z',
-            'dca_range': '投資設定!A:E'
-        },
-        'fubon_uk': {
-            'id': '1WlUslUTcXR-eVK-RdQAHv5Qqyg35xIyHqZgejYYvTIA',
-            'range': '總覽與損益!A:M'
-        }
-    }
-}
-
-# 目標配置設定
-TARGET_ALLOCATION = {
-    '美股ETF': 40,
-    '美股個股': 25,
-    '台股ETF': 20,
-    '台股個股': 15,
-    '美債ETF': 0,
-    '黃金ETF': 0
-}
-
-@st.cache_resource(ttl=3600)
-def get_google_sheets_service():
-    """取得Google Sheets服務實例"""
-    try:
-        if "gcp_service_account" in st.secrets:
-            credentials_info = dict(st.secrets["gcp_service_account"])
-            credentials = Credentials.from_service_account_info(credentials_info)
-        else:
-            st.error("找不到 gcp_service_account 設定在 Streamlit secrets 中")
-            return None
-        
-        scoped_credentials = credentials.with_scopes([
-            'https://www.googleapis.com/auth/spreadsheets'
-        ])
-        
-        return build('sheets', 'v4', credentials=scoped_credentials)
-    except Exception as e:
-        st.error(f"Google Sheets API 設置失敗: {e}")
-        return None
-
-@st.cache_data(ttl=14400)
-def get_usd_twd_rate():
-    """取得USDTWD 匯率"""
-    try:
-        ticker = yf.Ticker("USDTWD=X")
-        data = ticker.history(period="1d")
-        if not data.empty:
-            return data['Close'].iloc[-1]
-        else:
-            return 31.0
-    except Exception as e:
-        return 31.0
-
-@st.cache_data
-def parse_number(value):
-    """解析數字,處理各種格式"""
-    if pd.isna(value) or value is None:
-        return 0.0
-    if isinstance(value, (int, float)):
-        return float(value)
-    if not value or value == '':
-        return 0.0
-    
-    cleaned = str(value).replace(',', '').replace('%', '').replace('"', '').replace('$', '').strip()
-    
-    if not cleaned:
-        return 0.0
-        
-    try:
-        return float(cleaned)
-    except (ValueError, TypeError):
-        return 0.0
-
-def append_to_sheet(spreadsheet_id, range_name, values):
-    """將一列資料附加到指定的 Google Sheet 中"""
-    try:
-        service = get_google_sheets_service()
-        if not service:
-            st.error("無法連接至 Google Sheets 服務。")
-            return False
-
-        body = {
-            'values': values
-        }
-        result = service.spreadsheets().values().append(
-            spreadsheetId=spreadsheet_id,
-            range=range_name,
-            valueInputOption='USER_ENTERED',
-            insertDataOption='INSERT_ROWS',
-            body=body
-        ).execute()
-        return True
-    except Exception as e:
-        st.error(f"寫入 Google Sheets 失敗: {e}")
-        return False
-
-@st.cache_data(ttl=3600)
-def get_stock_name(stock_code):
-    """使用 twstock 取得股票名稱"""
-    try:
-        realtime_data = twstock.realtime.get(stock_code)
-        if realtime_data and realtime_data.get('success', False):
-            return realtime_data['info']['name']
-        else:
-            return f"股票{stock_code}"
-    except Exception as e:
-        st.warning(f"無法取得股票 {stock_code} 的名稱: {e}")
-        return f"股票{stock_code}"
-
-def get_next_row_number(sheet_id, range_name):
-    """獲取工作表的下一行號"""
-    try:
-        service = get_google_sheets_service()
-        if not service:
-            return None
-        
-        result = service.spreadsheets().values().get(
-            spreadsheetId=sheet_id,
-            range=range_name
-        ).execute()
-        
-        values = result.get('values', [])
-        return len(values) + 1
-        
-    except Exception as e:
-        st.error(f"獲取行號失敗: {e}")
-        return None
-
-def process_trading_record(person, stock_code, stock_price, stock_quantity, transaction_type, holding_type, transaction_date):
-    """處理交易記錄邏輯"""
-    try:
-        sheet_id = SHEET_CONFIGS[person]['id']
-        
-        if transaction_type == "買進":
-            total_amount = stock_price * stock_quantity
-            final_quantity = stock_quantity
-        else:
-            total_amount = stock_price * stock_quantity * (-1)
-            final_quantity = stock_quantity * (-1)
-        
-        trading_record_values = [[
-            transaction_date.strftime('%Y/%m/%d'),
-            stock_code,
-            stock_price,
-            '',
-            '',
-            total_amount,
-            final_quantity
-        ]]
-        
-        success = append_to_sheet(sheet_id, '交易紀錄', trading_record_values)
-        
-        if not success:
-            return False
-        
-        if holding_type == "新持有" and transaction_type == "買進":
-            stock_name = get_stock_name(stock_code)
-            next_row = get_next_row_number(sheet_id, '總覽與損益!A:A')
-            if next_row is None:
-                next_row = 2
-            
-            holdings_values = [[
-                stock_code,
-                stock_name,
-                f'=IF(ISBLANK(A{next_row}), "", SUMIF(\'交易紀錄\'!B:B, A{next_row}, \'交易紀錄\'!F:F))',
-                f'=IF(ISBLANK(A{next_row}), "", SUMIF(\'交易紀錄\'!B:B, A{next_row}, \'交易紀錄\'!G:G))',
-                f'=IF(ISBLANK(A{next_row}), "", GOOGLEFINANCE("TPE:" & A{next_row}, "price"))',
-                f'=IF(ISBLANK(A{next_row}), "", D{next_row}*E{next_row})',
-                f'=IF(ISBLANK(A{next_row}), "", F{next_row}-C{next_row})',
-                f'=IF(ISBLANK(A{next_row}), "", G{next_row}/C{next_row})'
-            ]]
-            
-            success = append_to_sheet(sheet_id, '總覽與損益', holdings_values)
-            
-        return success
-        
-    except Exception as e:
-        st.error(f"處理交易記錄時發生錯誤: {e}")
-        return False
-
-def render_trading_form_for_person(person):
-    """渲染交易記錄輸入表單"""
-    st.markdown('<div class="trading-form-container">', unsafe_allow_html=True)
-    st.markdown('<div class="trading-form-title">📝 新增交易記錄</div>', unsafe_allow_html=True)
-    
-    if 'trading_form_data' not in st.session_state:
-        st.session_state.trading_form_data = {
-            'holding_type': '原本持有',
-            'transaction_type': '買進',
-            'stock_code': '',
-            'stock_price': 100.0,
-            'stock_quantity': 1000
-        }
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.write("**持股狀態 (必選)**")
-        holding_type = st.radio(
-            "",
-            ["原本持有", "新持有"],
-            key="holding_type_radio",
-            horizontal=True,
-            index=0 if st.session_state.trading_form_data['holding_type'] == '原本持有' else 1
-        )
-        st.session_state.trading_form_data['holding_type'] = holding_type
-    
-    with col2:
-        st.write("**交易類型 (必選)**")
-        transaction_type = st.radio(
-            "",
-            ["買進", "賣出"],
-            key="transaction_type_radio",
-            horizontal=True,
-            index=0 if st.session_state.trading_form_data['transaction_type'] == '買進' else 1
-        )
-        if transaction_type != st.session_state.trading_form_data['transaction_type']:
-            st.session_state.trading_form_data['transaction_type'] = transaction_type
-            st.session_state.trading_form_data['stock_quantity'] = 1000
-    
-    st.divider()
-    
-    col3, col4, col5, col6 = st.columns(4)
-    
-    with col3:
-        transaction_date = st.date_input(
-            "交易日期",
-            value=datetime.now(),
-            key="transaction_date_input"
-        )
-    
-    with col4:
-        stock_code = st.text_input(
-            "股票代號",
-            placeholder="例如: 2330",
-            key="stock_code_input",
-            value=st.session_state.trading_form_data['stock_code']
-        )
-        st.session_state.trading_form_data['stock_code'] = stock_code
-    
-    with col5:
-        stock_price = st.number_input(
-            "股價",
-            min_value=0.01,
-            value=st.session_state.trading_form_data['stock_price'],
-            step=0.01,
-            format="%.2f",
-            key="stock_price_input"
-        )
-        st.session_state.trading_form_data['stock_price'] = stock_price
-    
-    with col6:
-        stock_quantity = st.number_input(
-            "股數",
-            value=st.session_state.trading_form_data['stock_quantity'],
-            step=1000,
-            min_value=1,
-            key="stock_quantity_input"
-        )
-        st.session_state.trading_form_data['stock_quantity'] = stock_quantity
-    
-    st.divider()
-    
-    if transaction_type == "買進":
-        total_amount = stock_price * stock_quantity
-        final_quantity = stock_quantity
-    else:
-        total_amount = stock_price * stock_quantity * (-1)
-        final_quantity = stock_quantity * (-1)
-    
-    col7, col8, col9 = st.columns(3)
-    with col7:
-        st.info(f"**交易金額:** NT${total_amount:,.0f}")
-    with col8:
-        st.info(f"**最終股數:** {final_quantity:,}")
-    with col9:
-        if holding_type == "新持有" and transaction_type == "買進":
-            st.success("**將同時新增至持股清單**")
-        else:
-            st.info("**僅記錄交易**")
-    
-    st.divider()
-    
-    col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
-    with col_btn2:
-        if st.button(
-            "✅ 確定",
-            use_container_width=True,
-            type="primary",
-            key="submit_trading_record"
-        ):
-            if not stock_code:
-                st.error("請輸入股票代號!")
-            elif stock_quantity <= 0:
-                st.error("股數必須大於零!")
-            else:
-                with st.spinner('正在處理交易記錄...'):
-                    success = process_trading_record(
-                        person=person,
-                        stock_code=stock_code,
-                        stock_price=stock_price,
-                        stock_quantity=stock_quantity,
-                        transaction_type=transaction_type,
-                        holding_type=holding_type,
-                        transaction_date=transaction_date
-                    )
-                
-                if success:
-                    st.success("✅ 交易記錄已成功新增!")
-                    if holding_type == "新持有" and transaction_type == "買進":
-                        st.success(f"✅ 股票 {stock_code} 已新增至持股清單!")
-                    
-                    st.session_state.trading_form_data = {
-                        'holding_type': '原本持有',
-                        'transaction_type': '買進',
-                        'stock_code': '',
-                        'stock_price': 100.0,
-                        'stock_quantity': 1000
-                    }
-                    
-                    time.sleep(1)
-                    st.cache_data.clear()
-                    st.rerun()
-                else:
-                    st.error("❌ 交易記錄新增失敗,請檢查網路連線或權限設定。")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-
-@st.cache_data(ttl=1800)
-def load_sheet_data(person, data_type, broker=None):
-    """從Google Sheets載入數據"""
-    service = get_google_sheets_service()
-    if not service:
-        return pd.DataFrame()
-    
-    try:
-        if person == 'ed_overseas':
-            config = SHEET_CONFIGS[person][broker]
-            sheet_id = config['id']
-            range_name = config['range']
-        else:
-            config = SHEET_CONFIGS[person]
-            sheet_id = config['id']
-            
-            if data_type == 'holdings':
-                range_name = config['holdings_range']
-            elif data_type == 'dca':
-                range_name = config.get('dca_range')
-            elif data_type == 'trend':
-                range_name = config.get('trend_range')
-            else:
-                return pd.DataFrame()
-        
-        if not range_name:
-            return pd.DataFrame()
-        
-        result = service.spreadsheets().values().get(
-            spreadsheetId=sheet_id,
-            range=range_name
-        ).execute()
-        
-        values = result.get('values', [])
-        if not values or len(values) < 2:
-            return pd.DataFrame()
-        
-        max_cols = len(values[0]) if values else 0
-        normalized_values = [row + [''] * (max_cols - len(row)) for row in values]
-        
-        df = pd.DataFrame(normalized_values[1:], columns=normalized_values[0])
-        df = df.dropna(how='all')
-        
-        if person == 'ed_overseas':
-            numeric_columns = [col for col in df.columns if any(keyword in col for keyword in ['價', '成本', '市值', '損益', '股數', '率'])]
-        elif data_type == 'holdings':
-            numeric_columns = ['總投入成本', '總持有股數', '目前股價', '目前總市值', '未實現損益', '報酬率']
-        elif data_type == 'dca':
-            numeric_columns = ['每月投入金額', '扣款日', '券商折扣']
-        elif data_type == 'trend':
-            numeric_columns = ['總市值']
-        else:
-            numeric_columns = []
-        
-        for col in numeric_columns:
-            if col in df.columns:
-                df[col] = df[col].apply(parse_number)
-        
-        return df
-        
-    except Exception as e:
-        st.error(f"載入{person} {broker or data_type}數據失敗: {str(e)}")
-        return pd.DataFrame()
-
-@st.cache_data(ttl=600)
-def load_notes_data(person):
-    """載入投資筆記數據"""
-    service = get_google_sheets_service()
-    if not service:
-        return pd.DataFrame()
-    
-    try:
-        config = SHEET_CONFIGS[person]
-        sheet_id = config['id']
-        range_name = config.get('notes_range')
-        
-        if not range_name:
-            return pd.DataFrame()
-        
-        result = service.spreadsheets().values().get(
-            spreadsheetId=sheet_id,
-            range=range_name
-        ).execute()
-        
-        values = result.get('values', [])
-        if not values or len(values) < 2:
-            return pd.DataFrame()
-        
-        max_cols = len(values[0]) if values else 0
-        normalized_values = [row + [''] * (max_cols - len(row)) for row in values]
-        
-        df = pd.DataFrame(normalized_values[1:], columns=normalized_values[0])
-        df = df.dropna(how='all')
-        
-        if '日期' in df.columns:
-            df['日期'] = pd.to_datetime(df['日期'], errors='coerce')
-        
-        return df
-        
-    except Exception as e:
-        st.error(f"載入{person}筆記失敗: {str(e)}")
-        return pd.DataFrame()
-
-def save_note(person, note_content):
-    """儲存筆記到 Google Sheets"""
-    try:
-        sheet_id = SHEET_CONFIGS[person]['id']
-        current_date = datetime.now().strftime('%Y/%m/%d %H:%M:%S')
-        
-        values_to_append = [[current_date, note_content]]
-        
-        success = append_to_sheet(sheet_id, 'notes', values_to_append)
-        
-        return success
-        
-    except Exception as e:
-        st.error(f"儲存筆記失敗: {e}")
-        return False
-
-def render_notes_section(person, notes_df):
-    """渲染筆記功能區塊"""
-    st.markdown('<div class="notes-container">', unsafe_allow_html=True)
-    st.markdown('<div class="notes-title">📝 投資筆記</div>', unsafe_allow_html=True)
-    
-    with st.form(key=f"note_form_{person}", clear_on_submit=True):
-        st.write("##### ✍️ 新增筆記")
-        note_content = st.text_area(
-            "筆記內容",
-            placeholder="記錄你的投資想法、市場觀察、交易原因...",
-            height=120,
-            key=f"note_content_{person}"
-        )
-        
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            submitted = st.form_submit_button("💾 儲存筆記", use_container_width=True, type="primary")
-        
-        if submitted:
-            if not note_content or note_content.strip() == "":
-                st.error("
